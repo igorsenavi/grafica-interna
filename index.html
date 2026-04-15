@@ -13,33 +13,38 @@
       <nav>
         <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
         <button class="nav-btn" data-tab="materias">Matérias-primas</button>
+        <button class="nav-btn" data-tab="papeis">Papéis</button>
         <button class="nav-btn" data-tab="produtos">Produtos</button>
-        <button class="nav-btn" data-tab="papeis">Papéis A4</button>
-        <button class="nav-btn" data-tab="aproveitamento">Aproveitamento</button>
+        <button class="nav-btn" data-tab="simulacao">Simulação</button>
       </nav>
     </aside>
 
     <main class="content">
       <section id="dashboard" class="tab active">
         <h2>Dashboard</h2>
+
         <div class="cards">
           <div class="card">
             <span>Matérias-primas</span>
             <strong id="totalMaterias">0</strong>
           </div>
           <div class="card">
-            <span>Produtos</span>
-            <strong id="totalProdutos">0</strong>
+            <span>Papéis</span>
+            <strong id="totalPapeis">0</strong>
           </div>
           <div class="card">
-            <span>Papéis cadastrados</span>
-            <strong id="totalPapeis">0</strong>
+            <span>Produtos</span>
+            <strong id="totalProdutos">0</strong>
           </div>
         </div>
 
         <div class="panel">
-          <h3>Resumo</h3>
-          <p>Essa é a primeira versão do seu sistema interno usando armazenamento local do navegador.</p>
+          <h3>Como funciona agora</h3>
+          <p>
+            O papel deixou de ser tratado como matéria-prima comum.
+            O sistema calcula quantos itens cabem na folha, quantas folhas o pedido usa,
+            o aproveitamento real e o custo unitário do papel de acordo com a quantidade informada.
+          </p>
         </div>
       </section>
 
@@ -53,6 +58,7 @@
               <label>Nome</label>
               <input type="text" id="materiaNome" required />
             </div>
+
             <div>
               <label>Unidade</label>
               <select id="materiaUnidade" required>
@@ -63,10 +69,12 @@
                 <option value="caixa">caixa</option>
               </select>
             </div>
+
             <div>
               <label>Custo por unidade (R$)</label>
               <input type="number" id="materiaCusto" step="0.01" min="0" required />
             </div>
+
             <div>
               <label>Observação</label>
               <input type="text" id="materiaObs" />
@@ -84,6 +92,54 @@
         </div>
       </section>
 
+      <section id="papeis" class="tab">
+        <h2>Papéis</h2>
+
+        <div class="panel">
+          <h3>Novo papel</h3>
+          <form id="formPapel" class="form-grid">
+            <div>
+              <label>Nome do papel</label>
+              <input type="text" id="papelNome" required />
+            </div>
+
+            <div>
+              <label>Gramatura</label>
+              <input type="text" id="papelGramatura" placeholder="Ex.: 180g" />
+            </div>
+
+            <div>
+              <label>Largura da folha (cm)</label>
+              <input type="number" id="papelLargura" step="0.01" min="0.01" value="21" required />
+            </div>
+
+            <div>
+              <label>Altura da folha (cm)</label>
+              <input type="number" id="papelAltura" step="0.01" min="0.01" value="29.7" required />
+            </div>
+
+            <div>
+              <label>Valor por folha (R$)</label>
+              <input type="number" id="papelValor" step="0.01" min="0" required />
+            </div>
+
+            <div>
+              <label>Observação</label>
+              <input type="text" id="papelObs" />
+            </div>
+
+            <div class="full">
+              <button type="submit">Salvar papel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Lista de papéis</h3>
+          <div id="listaPapeis"></div>
+        </div>
+      </section>
+
       <section id="produtos" class="tab">
         <h2>Produtos</h2>
 
@@ -93,6 +149,26 @@
             <div class="full">
               <label>Nome do produto</label>
               <input type="text" id="produtoNome" required />
+            </div>
+
+            <div>
+              <label>Largura do item (cm)</label>
+              <input type="number" id="produtoLargura" step="0.01" min="0.01" required />
+            </div>
+
+            <div>
+              <label>Altura do item (cm)</label>
+              <input type="number" id="produtoAltura" step="0.01" min="0.01" required />
+            </div>
+
+            <div>
+              <label>Margem entre itens (cm)</label>
+              <input type="number" id="produtoMargem" step="0.01" min="0" value="0" required />
+            </div>
+
+            <div>
+              <label>Papel padrão</label>
+              <select id="produtoPapel" required></select>
             </div>
 
             <div>
@@ -111,7 +187,7 @@
             </div>
 
             <div class="full">
-              <h4>Adicionar matéria-prima ao produto</h4>
+              <h4>Materiais extras do produto</h4>
               <div class="inline-group">
                 <select id="produtoMateriaSelect"></select>
                 <input type="number" id="produtoMateriaQtd" step="0.01" min="0" placeholder="Quantidade" />
@@ -135,53 +211,20 @@
         </div>
       </section>
 
-      <section id="papeis" class="tab">
-        <h2>Papéis A4</h2>
+      <section id="simulacao" class="tab">
+        <h2>Simulação / Orçamento</h2>
 
         <div class="panel">
-          <h3>Novo papel</h3>
-          <form id="formPapel" class="form-grid">
+          <h3>Calcular pedido</h3>
+          <form id="formSimulacao" class="form-grid">
             <div>
-              <label>Nome do papel</label>
-              <input type="text" id="papelNome" required />
-            </div>
-            <div>
-              <label>Valor por folha A4 (R$)</label>
-              <input type="number" id="papelValor" step="0.01" min="0" required />
+              <label>Produto</label>
+              <select id="simulacaoProduto" required></select>
             </div>
 
-            <div class="full">
-              <button type="submit">Salvar papel</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="panel">
-          <h3>Lista de papéis</h3>
-          <div id="listaPapeis"></div>
-        </div>
-      </section>
-
-      <section id="aproveitamento" class="tab">
-        <h2>Aproveitamento de Papel A4</h2>
-
-        <div class="panel">
-          <form id="formAproveitamento" class="form-grid">
             <div>
-              <label>Largura do item (cm)</label>
-              <input type="number" id="itemLargura" step="0.01" min="0.01" required />
-            </div>
-            <div>
-              <label>Altura do item (cm)</label>
-              <input type="number" id="itemAltura" step="0.01" min="0.01" required />
-            </div>
-            <div>
-              <label>Margem entre itens (cm)</label>
-              <input type="number" id="itemMargem" step="0.01" min="0" value="0" required />
-            </div>
-            <div>
-              <label>Papel</label>
-              <select id="papelAproveitamentoSelect" required></select>
+              <label>Quantidade</label>
+              <input type="number" id="simulacaoQuantidade" min="1" step="1" required />
             </div>
 
             <div class="full">
@@ -191,21 +234,68 @@
         </div>
 
         <div class="panel">
-          <h3>Resultado</h3>
-          <div class="cards">
-            <div class="card">
-              <span>Itens por folha</span>
-              <strong id="resultadoItensFolha">0</strong>
+          <h3>Resultado da simulação</h3>
+
+          <div class="result-grid">
+            <div class="result-box">
+              <span>Produto</span>
+              <strong id="resProduto">-</strong>
             </div>
-            <div class="card">
-              <span>Custo por item</span>
-              <strong id="resultadoCustoItem">R$ 0,00</strong>
+            <div class="result-box">
+              <span>Papel usado</span>
+              <strong id="resPapel">-</strong>
             </div>
-            <div class="card">
-              <span>Aproveitamento</span>
-              <strong id="resultadoAproveitamento">0%</strong>
+            <div class="result-box">
+              <span>Orientação</span>
+              <strong id="resOrientacao">-</strong>
+            </div>
+            <div class="result-box">
+              <span>Cabem por folha</span>
+              <strong id="resCabemFolha">0</strong>
+            </div>
+            <div class="result-box">
+              <span>Folhas necessárias</span>
+              <strong id="resFolhas">0</strong>
+            </div>
+            <div class="result-box">
+              <span>Aproveitamento real</span>
+              <strong id="resAproveitamento">0%</strong>
+            </div>
+            <div class="result-box">
+              <span>Desperdício</span>
+              <strong id="resDesperdicio">0%</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo total do papel</span>
+              <strong id="resCustoTotalPapel">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo unitário do papel</span>
+              <strong id="resCustoUnitPapel">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo unitário materiais extras</span>
+              <strong id="resCustoUnitExtras">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Subtotal unitário</span>
+              <strong id="resSubtotalUnit">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Preço sugerido unitário</span>
+              <strong id="resPrecoUnit">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo total do pedido</span>
+              <strong id="resCustoTotalPedido">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Preço sugerido total</span>
+              <strong id="resPrecoTotal">R$ 0,00</strong>
             </div>
           </div>
+
+          <div class="simulacao-info" id="resExplicacao"></div>
         </div>
       </section>
     </main>
