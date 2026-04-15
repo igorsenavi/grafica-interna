@@ -1,7 +1,7 @@
 const STORAGE_KEYS = {
-  materias: "grafica_materias",
-  produtos: "grafica_produtos",
-  papeis: "grafica_papeis",
+  materias: "grafica_v2_materias",
+  papeis: "grafica_v2_papeis",
+  produtos: "grafica_v2_produtos",
 };
 
 let materiasTemporariasProduto = [];
@@ -25,33 +25,14 @@ function uid() {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
 }
 
-function calcularPrecoProduto(produto, materias) {
-  let custoBase = 0;
-
-  produto.materias.forEach((item) => {
-    const materia = materias.find((m) => m.id === item.materiaId);
-    if (materia) {
-      custoBase += Number(materia.custo) * Number(item.quantidade);
-    }
-  });
-
-  const custoFixo = custoBase * (Number(produto.custoFixo) / 100);
-  const custoVariavel = custoBase * (Number(produto.custoVariavel) / 100);
-  const subtotal = custoBase + custoFixo + custoVariavel;
-  const lucro = subtotal * (Number(produto.lucro) / 100);
-  const precoVenda = subtotal + lucro;
-
-  return {
-    custoBase,
-    subtotal,
-    precoVenda,
-  };
+function percent(value) {
+  return `${Number(value || 0).toFixed(2)}%`;
 }
 
 function updateDashboard() {
   document.getElementById("totalMaterias").textContent = getData(STORAGE_KEYS.materias).length;
-  document.getElementById("totalProdutos").textContent = getData(STORAGE_KEYS.produtos).length;
   document.getElementById("totalPapeis").textContent = getData(STORAGE_KEYS.papeis).length;
+  document.getElementById("totalProdutos").textContent = getData(STORAGE_KEYS.produtos).length;
 }
 
 function renderMaterias() {
@@ -69,18 +50,18 @@ function renderMaterias() {
       ${materias
         .map(
           (item) => `
-        <div class="row">
-          <div class="row-info">
-            <strong>${item.nome}</strong>
-            <span>Unidade: ${item.unidade}</span>
-            <span>Custo: ${formatCurrency(item.custo)}</span>
-            ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
+          <div class="row">
+            <div class="row-info">
+              <strong>${item.nome}</strong>
+              <span>Unidade: ${item.unidade}</span>
+              <span>Custo por unidade: ${formatCurrency(item.custo)}</span>
+              ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
+            </div>
+            <div class="row-actions">
+              <button class="btn-danger" onclick="removerMateria('${item.id}')">Excluir</button>
+            </div>
           </div>
-          <div class="row-actions">
-            <button class="btn-danger" onclick="removerMateria('${item.id}')">Excluir</button>
-          </div>
-        </div>
-      `
+        `
         )
         .join("")}
     </div>
@@ -90,9 +71,59 @@ function renderMaterias() {
 }
 
 function removerMateria(id) {
+  if (!confirm("Deseja excluir esta matéria-prima?")) return;
+
   const materias = getData(STORAGE_KEYS.materias).filter((item) => item.id !== id);
   setData(STORAGE_KEYS.materias, materias);
+
   renderMaterias();
+  renderProdutos();
+  updateDashboard();
+}
+
+function renderPapeis() {
+  const lista = document.getElementById("listaPapeis");
+  const papeis = getData(STORAGE_KEYS.papeis);
+
+  if (!papeis.length) {
+    lista.innerHTML = `<p class="empty">Nenhum papel cadastrado.</p>`;
+    atualizarSelectPapeis();
+    return;
+  }
+
+  lista.innerHTML = `
+    <div class="item-list">
+      ${papeis
+        .map(
+          (papel) => `
+          <div class="row">
+            <div class="row-info">
+              <strong>${papel.nome}</strong>
+              <span>Gramatura: ${papel.gramatura || "-"}</span>
+              <span>Tamanho da folha: ${papel.largura} x ${papel.altura} cm</span>
+              <span>Valor por folha: ${formatCurrency(papel.valorFolha)}</span>
+              ${papel.observacao ? `<span>Obs.: ${papel.observacao}</span>` : ""}
+            </div>
+            <div class="row-actions">
+              <button class="btn-danger" onclick="removerPapel('${papel.id}')">Excluir</button>
+            </div>
+          </div>
+        `
+        )
+        .join("")}
+    </div>
+  `;
+
+  atualizarSelectPapeis();
+}
+
+function removerPapel(id) {
+  if (!confirm("Deseja excluir este papel?")) return;
+
+  const papeis = getData(STORAGE_KEYS.papeis).filter((item) => item.id !== id);
+  setData(STORAGE_KEYS.papeis, papeis);
+
+  renderPapeis();
   renderProdutos();
   updateDashboard();
 }
@@ -113,12 +144,39 @@ function atualizarSelectMaterias() {
     .join("");
 }
 
+function atualizarSelectPapeis() {
+  const selectProduto = document.getElementById("produtoPapel");
+  const selectSimulacao = document.getElementById("simulacaoProduto");
+  const papeis = getData(STORAGE_KEYS.papeis);
+  const produtos = getData(STORAGE_KEYS.produtos);
+
+  if (selectProduto) {
+    if (!papeis.length) {
+      selectProduto.innerHTML = `<option value="">Cadastre um papel primeiro</option>`;
+    } else {
+      selectProduto.innerHTML = papeis
+        .map((item) => `<option value="${item.id}">${item.nome} - ${formatCurrency(item.valorFolha)}</option>`)
+        .join("");
+    }
+  }
+
+  if (selectSimulacao) {
+    if (!produtos.length) {
+      selectSimulacao.innerHTML = `<option value="">Cadastre um produto primeiro</option>`;
+    } else {
+      selectSimulacao.innerHTML = produtos
+        .map((item) => `<option value="${item.id}">${item.nome}</option>`)
+        .join("");
+    }
+  }
+}
+
 function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
   const container = document.getElementById("materiasDoProduto");
   const materias = getData(STORAGE_KEYS.materias);
 
   if (!materiasTemporariasProduto.length) {
-    container.innerHTML = `<p class="empty">Nenhuma matéria-prima adicionada ao produto.</p>`;
+    container.innerHTML = `<p class="empty">Nenhum material extra adicionado ao produto.</p>`;
     return;
   }
 
@@ -126,11 +184,12 @@ function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
     .map((item, index) => {
       const materia = materias.find((m) => m.id === item.materiaId);
       const nome = materia ? materia.nome : "Matéria não encontrada";
+
       return `
         <div class="row">
           <div class="row-info">
             <strong>${nome}</strong>
-            <span>Quantidade: ${item.quantidade}</span>
+            <span>Quantidade por unidade do produto: ${item.quantidade}</span>
           </div>
           <div class="row-actions">
             <button class="btn-danger" onclick="removerMateriaTemporaria(${index})">Remover</button>
@@ -149,10 +208,12 @@ function removerMateriaTemporaria(index) {
 function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   const produtos = getData(STORAGE_KEYS.produtos);
+  const papeis = getData(STORAGE_KEYS.papeis);
   const materias = getData(STORAGE_KEYS.materias);
 
   if (!produtos.length) {
     lista.innerHTML = `<p class="empty">Nenhum produto cadastrado.</p>`;
+    atualizarSelectPapeis();
     return;
   }
 
@@ -160,9 +221,9 @@ function renderProdutos() {
     <div class="product-list">
       ${produtos
         .map((produto) => {
-          const calculo = calcularPrecoProduto(produto, materias);
+          const papel = papeis.find((p) => p.id === produto.papelId);
 
-          const tagsMaterias = produto.materias
+          const tagsMaterias = produto.materiaisExtras
             .map((item) => {
               const materia = materias.find((m) => m.id === item.materiaId);
               if (!materia) return "";
@@ -174,10 +235,11 @@ function renderProdutos() {
             <div class="row">
               <div class="row-info">
                 <strong>${produto.nome}</strong>
-                <span>Custo base: ${formatCurrency(calculo.custoBase)}</span>
-                <span>Preço sugerido: ${formatCurrency(calculo.precoVenda)}</span>
+                <span>Tamanho: ${produto.largura} x ${produto.altura} cm</span>
+                <span>Margem: ${produto.margem} cm</span>
+                <span>Papel padrão: ${papel ? papel.nome : "Não encontrado"}</span>
                 <span>Fixos: ${produto.custoFixo}% | Variáveis: ${produto.custoVariavel}% | Lucro: ${produto.lucro}%</span>
-                <div>${tagsMaterias}</div>
+                <div>${tagsMaterias || '<span class="empty">Sem materiais extras.</span>'}</div>
               </div>
               <div class="row-actions">
                 <button class="btn-danger" onclick="removerProduto('${produto.id}')">Excluir</button>
@@ -188,94 +250,169 @@ function renderProdutos() {
         .join("")}
     </div>
   `;
+
+  atualizarSelectPapeis();
 }
 
 function removerProduto(id) {
+  if (!confirm("Deseja excluir este produto?")) return;
+
   const produtos = getData(STORAGE_KEYS.produtos).filter((item) => item.id !== id);
   setData(STORAGE_KEYS.produtos, produtos);
+
   renderProdutos();
   updateDashboard();
+  atualizarSelectPapeis();
 }
 
-function renderPapeis() {
-  const lista = document.getElementById("listaPapeis");
-  const papeis = getData(STORAGE_KEYS.papeis);
-  const select = document.getElementById("papelAproveitamentoSelect");
+function calcularCapacidadeFolha(produto, papel) {
+  const larguraFolha = Number(papel.largura);
+  const alturaFolha = Number(papel.altura);
+  const larguraItem = Number(produto.largura);
+  const alturaItem = Number(produto.altura);
+  const margem = Number(produto.margem);
 
-  if (!papeis.length) {
-    lista.innerHTML = `<p class="empty">Nenhum papel cadastrado.</p>`;
-    select.innerHTML = `<option value="">Cadastre um papel primeiro</option>`;
+  const larguraComMargem = larguraItem + margem;
+  const alturaComMargem = alturaItem + margem;
+
+  const normalColunas = Math.floor(larguraFolha / larguraComMargem);
+  const normalLinhas = Math.floor(alturaFolha / alturaComMargem);
+  const qtdNormal = normalColunas * normalLinhas;
+
+  const rotColunas = Math.floor(larguraFolha / alturaComMargem);
+  const rotLinhas = Math.floor(alturaFolha / larguraComMargem);
+  const qtdRotacionada = rotColunas * rotLinhas;
+
+  if (qtdRotacionada > qtdNormal) {
+    return {
+      capacidadePorFolha: qtdRotacionada,
+      orientacao: "Rotacionada",
+    };
+  }
+
+  return {
+    capacidadePorFolha: qtdNormal,
+    orientacao: "Normal",
+  };
+}
+
+function calcularCustoMateriaisExtrasUnitario(produto, materias) {
+  let total = 0;
+
+  produto.materiaisExtras.forEach((item) => {
+    const materia = materias.find((m) => m.id === item.materiaId);
+    if (materia) {
+      total += Number(materia.custo) * Number(item.quantidade);
+    }
+  });
+
+  return total;
+}
+
+function calcularSimulacao(produtoId, quantidade) {
+  const produtos = getData(STORAGE_KEYS.produtos);
+  const papeis = getData(STORAGE_KEYS.papeis);
+  const materias = getData(STORAGE_KEYS.materias);
+
+  const produto = produtos.find((p) => p.id === produtoId);
+  if (!produto) return null;
+
+  const papel = papeis.find((p) => p.id === produto.papelId);
+  if (!papel) return null;
+
+  const { capacidadePorFolha, orientacao } = calcularCapacidadeFolha(produto, papel);
+
+  if (!capacidadePorFolha || capacidadePorFolha <= 0) {
+    return {
+      erro: "Esse item não cabe na folha configurada com as medidas atuais.",
+    };
+  }
+
+  const folhasNecessarias = Math.ceil(Number(quantidade) / capacidadePorFolha);
+  const aproveitamentoReal = (Number(quantidade) / (folhasNecessarias * capacidadePorFolha)) * 100;
+  const desperdicio = 100 - aproveitamentoReal;
+
+  const custoTotalPapel = folhasNecessarias * Number(papel.valorFolha);
+  const custoUnitarioPapel = custoTotalPapel / Number(quantidade);
+
+  const custoUnitarioExtras = calcularCustoMateriaisExtrasUnitario(produto, materias);
+  const subtotalUnitario = custoUnitarioPapel + custoUnitarioExtras;
+
+  const acrescimoFixo = subtotalUnitario * (Number(produto.custoFixo) / 100);
+  const acrescimoVariavel = subtotalUnitario * (Number(produto.custoVariavel) / 100);
+  const subtotalComCustos = subtotalUnitario + acrescimoFixo + acrescimoVariavel;
+
+  const lucroUnitario = subtotalComCustos * (Number(produto.lucro) / 100);
+  const precoSugeridoUnitario = subtotalComCustos + lucroUnitario;
+
+  const custoTotalPedido = subtotalComCustos * Number(quantidade);
+  const precoSugeridoTotal = precoSugeridoUnitario * Number(quantidade);
+
+  return {
+    produto,
+    papel,
+    orientacao,
+    capacidadePorFolha,
+    folhasNecessarias,
+    aproveitamentoReal,
+    desperdicio,
+    custoTotalPapel,
+    custoUnitarioPapel,
+    custoUnitarioExtras,
+    subtotalUnitario,
+    subtotalComCustos,
+    precoSugeridoUnitario,
+    custoTotalPedido,
+    precoSugeridoTotal,
+    quantidade,
+  };
+}
+
+function preencherResultadoSimulacao(resultado) {
+  if (resultado.erro) {
+    alert(resultado.erro);
     return;
   }
 
-  lista.innerHTML = `
-    <div class="item-list">
-      ${papeis
-        .map(
-          (papel) => `
-        <div class="row">
-          <div class="row-info">
-            <strong>${papel.nome}</strong>
-            <span>Valor por folha A4: ${formatCurrency(papel.valor)}</span>
-          </div>
-          <div class="row-actions">
-            <button class="btn-danger" onclick="removerPapel('${papel.id}')">Excluir</button>
-          </div>
-        </div>
-      `
-        )
-        .join("")}
-    </div>
+  document.getElementById("resProduto").textContent = resultado.produto.nome;
+  document.getElementById("resPapel").textContent = resultado.papel.nome;
+  document.getElementById("resOrientacao").textContent = resultado.orientacao;
+  document.getElementById("resCabemFolha").textContent = resultado.capacidadePorFolha;
+  document.getElementById("resFolhas").textContent = resultado.folhasNecessarias;
+  document.getElementById("resAproveitamento").textContent = percent(resultado.aproveitamentoReal);
+  document.getElementById("resDesperdicio").textContent = percent(resultado.desperdicio);
+  document.getElementById("resCustoTotalPapel").textContent = formatCurrency(resultado.custoTotalPapel);
+  document.getElementById("resCustoUnitPapel").textContent = formatCurrency(resultado.custoUnitarioPapel);
+  document.getElementById("resCustoUnitExtras").textContent = formatCurrency(resultado.custoUnitarioExtras);
+  document.getElementById("resSubtotalUnit").textContent = formatCurrency(resultado.subtotalComCustos);
+  document.getElementById("resPrecoUnit").textContent = formatCurrency(resultado.precoSugeridoUnitario);
+  document.getElementById("resCustoTotalPedido").textContent = formatCurrency(resultado.custoTotalPedido);
+  document.getElementById("resPrecoTotal").textContent = formatCurrency(resultado.precoSugeridoTotal);
+
+  document.getElementById("resExplicacao").innerHTML = `
+    Para o produto <strong>${resultado.produto.nome}</strong>, cabem
+    <strong>${resultado.capacidadePorFolha}</strong> unidades por folha no modo
+    <strong>${resultado.orientacao.toLowerCase()}</strong>.
+    <br><br>
+    Para produzir <strong>${resultado.quantidade}</strong> unidade(s), o sistema calcula
+    <strong>${resultado.folhasNecessarias}</strong> folha(s), com aproveitamento real de
+    <strong>${percent(resultado.aproveitamentoReal)}</strong>.
+    <br><br>
+    O custo do papel do pedido é <strong>${formatCurrency(resultado.custoTotalPapel)}</strong>,
+    gerando custo unitário de papel de <strong>${formatCurrency(resultado.custoUnitarioPapel)}</strong>.
+    Depois disso, o sistema soma materiais extras, custos percentuais e lucro para sugerir o valor final.
   `;
-
-  select.innerHTML = papeis
-    .map((papel) => `<option value="${papel.id}">${papel.nome} - ${formatCurrency(papel.valor)}</option>`)
-    .join("");
-}
-
-function removerPapel(id) {
-  const papeis = getData(STORAGE_KEYS.papeis).filter((item) => item.id !== id);
-  setData(STORAGE_KEYS.papeis, papeis);
-  renderPapeis();
-  updateDashboard();
-}
-
-function calcularAproveitamento({ largura, altura, margem, papelValor }) {
-  const a4Largura = 21;
-  const a4Altura = 29.7;
-
-  const larguraComMargem = Number(largura) + Number(margem);
-  const alturaComMargem = Number(altura) + Number(margem);
-
-  const qtdNormal =
-    Math.floor(a4Largura / larguraComMargem) * Math.floor(a4Altura / alturaComMargem);
-
-  const qtdRotacionada =
-    Math.floor(a4Largura / alturaComMargem) * Math.floor(a4Altura / larguraComMargem);
-
-  const melhorQtd = Math.max(qtdNormal, qtdRotacionada);
-
-  const areaItem = Number(largura) * Number(altura);
-  const areaTotalItens = melhorQtd * areaItem;
-  const areaFolha = a4Largura * a4Altura;
-  const aproveitamento = areaFolha > 0 ? (areaTotalItens / areaFolha) * 100 : 0;
-  const custoItem = melhorQtd > 0 ? Number(papelValor) / melhorQtd : 0;
-
-  return {
-    itensPorFolha: melhorQtd,
-    custoItem,
-    aproveitamento,
-  };
 }
 
 document.getElementById("formMateria").addEventListener("submit", (e) => {
   e.preventDefault();
 
   const materias = getData(STORAGE_KEYS.materias);
+  const nome = document.getElementById("materiaNome").value.trim();
 
   const novaMateria = {
     id: uid(),
-    nome: document.getElementById("materiaNome").value.trim(),
+    nome,
     unidade: document.getElementById("materiaUnidade").value,
     custo: Number(document.getElementById("materiaCusto").value),
     observacao: document.getElementById("materiaObs").value.trim(),
@@ -286,6 +423,32 @@ document.getElementById("formMateria").addEventListener("submit", (e) => {
 
   e.target.reset();
   renderMaterias();
+  updateDashboard();
+});
+
+document.getElementById("formPapel").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const papeis = getData(STORAGE_KEYS.papeis);
+
+  const novoPapel = {
+    id: uid(),
+    nome: document.getElementById("papelNome").value.trim(),
+    gramatura: document.getElementById("papelGramatura").value.trim(),
+    largura: Number(document.getElementById("papelLargura").value),
+    altura: Number(document.getElementById("papelAltura").value),
+    valorFolha: Number(document.getElementById("papelValor").value),
+    observacao: document.getElementById("papelObs").value.trim(),
+  };
+
+  papeis.push(novoPapel);
+  setData(STORAGE_KEYS.papeis, papeis);
+
+  e.target.reset();
+  document.getElementById("papelLargura").value = 21;
+  document.getElementById("papelAltura").value = 29.7;
+
+  renderPapeis();
   updateDashboard();
 });
 
@@ -306,8 +469,9 @@ document.getElementById("btnAdicionarMateriaProduto").addEventListener("click", 
 document.getElementById("formProduto").addEventListener("submit", (e) => {
   e.preventDefault();
 
-  if (!materiasTemporariasProduto.length) {
-    alert("Adicione pelo menos uma matéria-prima ao produto.");
+  const papelId = document.getElementById("produtoPapel").value;
+  if (!papelId) {
+    alert("Cadastre e selecione um papel para o produto.");
     return;
   }
 
@@ -316,10 +480,14 @@ document.getElementById("formProduto").addEventListener("submit", (e) => {
   const novoProduto = {
     id: uid(),
     nome: document.getElementById("produtoNome").value.trim(),
+    largura: Number(document.getElementById("produtoLargura").value),
+    altura: Number(document.getElementById("produtoAltura").value),
+    margem: Number(document.getElementById("produtoMargem").value),
+    papelId,
     custoFixo: Number(document.getElementById("produtoCustoFixo").value),
     custoVariavel: Number(document.getElementById("produtoCustoVariavel").value),
     lucro: Number(document.getElementById("produtoLucro").value),
-    materias: [...materiasTemporariasProduto],
+    materiaisExtras: [...materiasTemporariasProduto],
   };
 
   produtos.push(novoProduto);
@@ -332,52 +500,24 @@ document.getElementById("formProduto").addEventListener("submit", (e) => {
   updateDashboard();
 });
 
-document.getElementById("formPapel").addEventListener("submit", (e) => {
+document.getElementById("formSimulacao").addEventListener("submit", (e) => {
   e.preventDefault();
 
-  const papeis = getData(STORAGE_KEYS.papeis);
+  const produtoId = document.getElementById("simulacaoProduto").value;
+  const quantidade = Number(document.getElementById("simulacaoQuantidade").value);
 
-  const novoPapel = {
-    id: uid(),
-    nome: document.getElementById("papelNome").value.trim(),
-    valor: Number(document.getElementById("papelValor").value),
-  };
-
-  papeis.push(novoPapel);
-  setData(STORAGE_KEYS.papeis, papeis);
-
-  e.target.reset();
-  renderPapeis();
-  updateDashboard();
-});
-
-document.getElementById("formAproveitamento").addEventListener("submit", (e) => {
-  e.preventDefault();
-
-  const largura = Number(document.getElementById("itemLargura").value);
-  const altura = Number(document.getElementById("itemAltura").value);
-  const margem = Number(document.getElementById("itemMargem").value);
-  const papelId = document.getElementById("papelAproveitamentoSelect").value;
-
-  const papeis = getData(STORAGE_KEYS.papeis);
-  const papel = papeis.find((p) => p.id === papelId);
-
-  if (!papel) {
-    alert("Selecione um papel.");
+  if (!produtoId || !quantidade || quantidade <= 0) {
+    alert("Selecione um produto e informe uma quantidade válida.");
     return;
   }
 
-  const resultado = calcularAproveitamento({
-    largura,
-    altura,
-    margem,
-    papelValor: papel.valor,
-  });
+  const resultado = calcularSimulacao(produtoId, quantidade);
+  if (!resultado) {
+    alert("Não foi possível calcular a simulação.");
+    return;
+  }
 
-  document.getElementById("resultadoItensFolha").textContent = resultado.itensPorFolha;
-  document.getElementById("resultadoCustoItem").textContent = formatCurrency(resultado.custoItem);
-  document.getElementById("resultadoAproveitamento").textContent =
-    `${resultado.aproveitamento.toFixed(2)}%`;
+  preencherResultadoSimulacao(resultado);
 });
 
 document.querySelectorAll(".nav-btn").forEach((button) => {
@@ -392,10 +532,11 @@ document.querySelectorAll(".nav-btn").forEach((button) => {
 
 function init() {
   renderMaterias();
-  renderProdutos();
   renderPapeis();
+  renderProdutos();
   r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   updateDashboard();
+  atualizarSelectPapeis();
 }
 
 init();
