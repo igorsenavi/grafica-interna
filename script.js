@@ -1,7 +1,8 @@
 const STORAGE_KEYS = {
-  materias: "grafica_v2_materias",
-  papeis: "grafica_v2_papeis",
-  produtos: "grafica_v2_produtos",
+  materias: "grafica_v3_materias",
+  papeis: "grafica_v3_papeis",
+  produtos: "grafica_v3_produtos",
+  configuracoes: "grafica_v3_configuracoes",
 };
 
 let materiasTemporariasProduto = [];
@@ -14,6 +15,17 @@ function setData(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+function getConfiguracoes() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.configuracoes)) || {
+    custoTanque: 160,
+    rendimentoFolhas: 1000,
+  };
+}
+
+function setConfiguracoes(data) {
+  localStorage.setItem(STORAGE_KEYS.configuracoes, JSON.stringify(data));
+}
+
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -21,18 +33,49 @@ function formatCurrency(value) {
   });
 }
 
+function percent(value) {
+  return `${Number(value || 0).toFixed(2)}%`;
+}
+
 function uid() {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
 }
 
-function percent(value) {
-  return `${Number(value || 0).toFixed(2)}%`;
+function getCustoTintaPorFolha() {
+  const configuracoes = getConfiguracoes();
+  const custoTanque = Number(configuracoes.custoTanque || 0);
+  const rendimentoFolhas = Number(configuracoes.rendimentoFolhas || 0);
+
+  if (!rendimentoFolhas || rendimentoFolhas <= 0) return 0;
+  return custoTanque / rendimentoFolhas;
 }
 
 function updateDashboard() {
   document.getElementById("totalMaterias").textContent = getData(STORAGE_KEYS.materias).length;
   document.getElementById("totalPapeis").textContent = getData(STORAGE_KEYS.papeis).length;
   document.getElementById("totalProdutos").textContent = getData(STORAGE_KEYS.produtos).length;
+
+  const configuracoes = getConfiguracoes();
+  const tintaPorFolha = getCustoTintaPorFolha();
+
+  document.getElementById("dashCustoTanque").textContent = formatCurrency(configuracoes.custoTanque);
+  document.getElementById("dashRendimento").textContent = `${Number(configuracoes.rendimentoFolhas || 0)} folhas`;
+  document.getElementById("dashTintaFolha").textContent = formatCurrency(tintaPorFolha);
+}
+
+function preencherConfiguracoesTela() {
+  const configuracoes = getConfiguracoes();
+  const tintaPorFolha = getCustoTintaPorFolha();
+
+  const inputCustoTanque = document.getElementById("configCustoTanque");
+  const inputRendimentoFolhas = document.getElementById("configRendimentoFolhas");
+
+  if (inputCustoTanque) inputCustoTanque.value = configuracoes.custoTanque;
+  if (inputRendimentoFolhas) inputRendimentoFolhas.value = configuracoes.rendimentoFolhas;
+
+  document.getElementById("cfgResCustoTanque").textContent = formatCurrency(configuracoes.custoTanque);
+  document.getElementById("cfgResRendimento").textContent = `${Number(configuracoes.rendimentoFolhas || 0)} folhas`;
+  document.getElementById("cfgResTintaFolha").textContent = formatCurrency(tintaPorFolha);
 }
 
 function renderMaterias() {
@@ -87,7 +130,7 @@ function renderPapeis() {
 
   if (!papeis.length) {
     lista.innerHTML = `<p class="empty">Nenhum papel cadastrado.</p>`;
-    atualizarSelectPapeis();
+    atualizarSelects();
     return;
   }
 
@@ -114,7 +157,7 @@ function renderPapeis() {
     </div>
   `;
 
-  atualizarSelectPapeis();
+  atualizarSelects();
 }
 
 function removerPapel(id) {
@@ -144,27 +187,29 @@ function atualizarSelectMaterias() {
     .join("");
 }
 
-function atualizarSelectPapeis() {
-  const selectProduto = document.getElementById("produtoPapel");
-  const selectSimulacao = document.getElementById("simulacaoProduto");
+function atualizarSelects() {
+  atualizarSelectMaterias();
+
+  const selectProdutoPapel = document.getElementById("produtoPapel");
+  const selectSimulacaoProduto = document.getElementById("simulacaoProduto");
   const papeis = getData(STORAGE_KEYS.papeis);
   const produtos = getData(STORAGE_KEYS.produtos);
 
-  if (selectProduto) {
+  if (selectProdutoPapel) {
     if (!papeis.length) {
-      selectProduto.innerHTML = `<option value="">Cadastre um papel primeiro</option>`;
+      selectProdutoPapel.innerHTML = `<option value="">Cadastre um papel primeiro</option>`;
     } else {
-      selectProduto.innerHTML = papeis
+      selectProdutoPapel.innerHTML = papeis
         .map((item) => `<option value="${item.id}">${item.nome} - ${formatCurrency(item.valorFolha)}</option>`)
         .join("");
     }
   }
 
-  if (selectSimulacao) {
+  if (selectSimulacaoProduto) {
     if (!produtos.length) {
-      selectSimulacao.innerHTML = `<option value="">Cadastre um produto primeiro</option>`;
+      selectSimulacaoProduto.innerHTML = `<option value="">Cadastre um produto primeiro</option>`;
     } else {
-      selectSimulacao.innerHTML = produtos
+      selectSimulacaoProduto.innerHTML = produtos
         .map((item) => `<option value="${item.id}">${item.nome}</option>`)
         .join("");
     }
@@ -213,7 +258,7 @@ function renderProdutos() {
 
   if (!produtos.length) {
     lista.innerHTML = `<p class="empty">Nenhum produto cadastrado.</p>`;
-    atualizarSelectPapeis();
+    atualizarSelects();
     return;
   }
 
@@ -251,7 +296,7 @@ function renderProdutos() {
     </div>
   `;
 
-  atualizarSelectPapeis();
+  atualizarSelects();
 }
 
 function removerProduto(id) {
@@ -262,7 +307,7 @@ function removerProduto(id) {
 
   renderProdutos();
   updateDashboard();
-  atualizarSelectPapeis();
+  atualizarSelects();
 }
 
 function calcularCapacidadeFolha(produto, papel) {
@@ -328,19 +373,22 @@ function calcularSimulacao(produtoId, quantidade) {
     };
   }
 
+  const custoTintaPorFolha = getCustoTintaPorFolha();
   const folhasNecessarias = Math.ceil(Number(quantidade) / capacidadePorFolha);
   const aproveitamentoReal = (Number(quantidade) / (folhasNecessarias * capacidadePorFolha)) * 100;
   const desperdicio = 100 - aproveitamentoReal;
 
   const custoTotalPapel = folhasNecessarias * Number(papel.valorFolha);
-  const custoUnitarioPapel = custoTotalPapel / Number(quantidade);
+  const custoTotalTinta = folhasNecessarias * custoTintaPorFolha;
+  const custoTotalImpressao = custoTotalPapel + custoTotalTinta;
+  const custoUnitarioImpressao = custoTotalImpressao / Number(quantidade);
 
   const custoUnitarioExtras = calcularCustoMateriaisExtrasUnitario(produto, materias);
-  const subtotalUnitario = custoUnitarioPapel + custoUnitarioExtras;
+  const subtotalBaseUnitario = custoUnitarioImpressao + custoUnitarioExtras;
 
-  const acrescimoFixo = subtotalUnitario * (Number(produto.custoFixo) / 100);
-  const acrescimoVariavel = subtotalUnitario * (Number(produto.custoVariavel) / 100);
-  const subtotalComCustos = subtotalUnitario + acrescimoFixo + acrescimoVariavel;
+  const acrescimoFixo = subtotalBaseUnitario * (Number(produto.custoFixo) / 100);
+  const acrescimoVariavel = subtotalBaseUnitario * (Number(produto.custoVariavel) / 100);
+  const subtotalComCustos = subtotalBaseUnitario + acrescimoFixo + acrescimoVariavel;
 
   const lucroUnitario = subtotalComCustos * (Number(produto.lucro) / 100);
   const precoSugeridoUnitario = subtotalComCustos + lucroUnitario;
@@ -357,14 +405,16 @@ function calcularSimulacao(produtoId, quantidade) {
     aproveitamentoReal,
     desperdicio,
     custoTotalPapel,
-    custoUnitarioPapel,
+    custoTotalTinta,
+    custoTotalImpressao,
+    custoUnitarioImpressao,
     custoUnitarioExtras,
-    subtotalUnitario,
     subtotalComCustos,
     precoSugeridoUnitario,
     custoTotalPedido,
     precoSugeridoTotal,
     quantidade,
+    custoTintaPorFolha,
   };
 }
 
@@ -382,7 +432,9 @@ function preencherResultadoSimulacao(resultado) {
   document.getElementById("resAproveitamento").textContent = percent(resultado.aproveitamentoReal);
   document.getElementById("resDesperdicio").textContent = percent(resultado.desperdicio);
   document.getElementById("resCustoTotalPapel").textContent = formatCurrency(resultado.custoTotalPapel);
-  document.getElementById("resCustoUnitPapel").textContent = formatCurrency(resultado.custoUnitarioPapel);
+  document.getElementById("resCustoTotalTinta").textContent = formatCurrency(resultado.custoTotalTinta);
+  document.getElementById("resCustoTotalImpressao").textContent = formatCurrency(resultado.custoTotalImpressao);
+  document.getElementById("resCustoUnitImpressao").textContent = formatCurrency(resultado.custoUnitarioImpressao);
   document.getElementById("resCustoUnitExtras").textContent = formatCurrency(resultado.custoUnitarioExtras);
   document.getElementById("resSubtotalUnit").textContent = formatCurrency(resultado.subtotalComCustos);
   document.getElementById("resPrecoUnit").textContent = formatCurrency(resultado.precoSugeridoUnitario);
@@ -398,21 +450,39 @@ function preencherResultadoSimulacao(resultado) {
     <strong>${resultado.folhasNecessarias}</strong> folha(s), com aproveitamento real de
     <strong>${percent(resultado.aproveitamentoReal)}</strong>.
     <br><br>
-    O custo do papel do pedido é <strong>${formatCurrency(resultado.custoTotalPapel)}</strong>,
-    gerando custo unitário de papel de <strong>${formatCurrency(resultado.custoUnitarioPapel)}</strong>.
-    Depois disso, o sistema soma materiais extras, custos percentuais e lucro para sugerir o valor final.
+    O custo total do papel é <strong>${formatCurrency(resultado.custoTotalPapel)}</strong>,
+    o custo total da tinta é <strong>${formatCurrency(resultado.custoTotalTinta)}</strong>,
+    e o custo total de impressão fica em <strong>${formatCurrency(resultado.custoTotalImpressao)}</strong>.
+    <br><br>
+    A tinta está sendo calculada em <strong>${formatCurrency(resultado.custoTintaPorFolha)}</strong> por folha,
+    com base nas configurações da impressora.
   `;
 }
+
+document.getElementById("formConfiguracoes").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const custoTanque = Number(document.getElementById("configCustoTanque").value);
+  const rendimentoFolhas = Number(document.getElementById("configRendimentoFolhas").value);
+
+  setConfiguracoes({
+    custoTanque,
+    rendimentoFolhas,
+  });
+
+  preencherConfiguracoesTela();
+  updateDashboard();
+  alert("Configurações salvas com sucesso.");
+});
 
 document.getElementById("formMateria").addEventListener("submit", (e) => {
   e.preventDefault();
 
   const materias = getData(STORAGE_KEYS.materias);
-  const nome = document.getElementById("materiaNome").value.trim();
 
   const novaMateria = {
     id: uid(),
-    nome,
+    nome: document.getElementById("materiaNome").value.trim(),
     unidade: document.getElementById("materiaUnidade").value,
     custo: Number(document.getElementById("materiaCusto").value),
     observacao: document.getElementById("materiaObs").value.trim(),
@@ -531,12 +601,20 @@ document.querySelectorAll(".nav-btn").forEach((button) => {
 });
 
 function init() {
+  if (!localStorage.getItem(STORAGE_KEYS.configuracoes)) {
+    setConfiguracoes({
+      custoTanque: 160,
+      rendimentoFolhas: 1000,
+    });
+  }
+
+  preencherConfiguracoesTela();
   renderMaterias();
   renderPapeis();
   renderProdutos();
   r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   updateDashboard();
-  atualizarSelectPapeis();
+  atualizarSelects();
 }
 
 init();
