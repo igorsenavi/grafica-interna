@@ -1,11 +1,13 @@
 const STORAGE_KEYS = {
-  materias: "grafica_v3_materias",
-  papeis: "grafica_v3_papeis",
-  produtos: "grafica_v3_produtos",
-  configuracoes: "grafica_v3_configuracoes",
+  materias: "grafica_v4_materias",
+  papeis: "grafica_v4_papeis",
+  produtos: "grafica_v4_produtos",
+  configuracoes: "grafica_v4_configuracoes",
+  orcamentos: "grafica_v4_orcamentos",
 };
 
 let materiasTemporariasProduto = [];
+let ultimoResultadoSimulacao = null;
 
 function getData(key) {
   return JSON.parse(localStorage.getItem(key)) || [];
@@ -41,6 +43,11 @@ function uid() {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
 }
 
+function formatDateTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString("pt-BR");
+}
+
 function getCustoTintaPorFolha() {
   const configuracoes = getConfiguracoes();
   const custoTanque = Number(configuracoes.custoTanque || 0);
@@ -54,28 +61,52 @@ function updateDashboard() {
   document.getElementById("totalMaterias").textContent = getData(STORAGE_KEYS.materias).length;
   document.getElementById("totalPapeis").textContent = getData(STORAGE_KEYS.papeis).length;
   document.getElementById("totalProdutos").textContent = getData(STORAGE_KEYS.produtos).length;
+  document.getElementById("totalOrcamentos").textContent = getData(STORAGE_KEYS.orcamentos).length;
 
   const configuracoes = getConfiguracoes();
-  const tintaPorFolha = getCustoTintaPorFolha();
-
   document.getElementById("dashCustoTanque").textContent = formatCurrency(configuracoes.custoTanque);
-  document.getElementById("dashRendimento").textContent = `${Number(configuracoes.rendimentoFolhas || 0)} folhas`;
-  document.getElementById("dashTintaFolha").textContent = formatCurrency(tintaPorFolha);
+  document.getElementById("dashTintaFolha").textContent = formatCurrency(getCustoTintaPorFolha());
 }
 
 function preencherConfiguracoesTela() {
   const configuracoes = getConfiguracoes();
   const tintaPorFolha = getCustoTintaPorFolha();
 
-  const inputCustoTanque = document.getElementById("configCustoTanque");
-  const inputRendimentoFolhas = document.getElementById("configRendimentoFolhas");
-
-  if (inputCustoTanque) inputCustoTanque.value = configuracoes.custoTanque;
-  if (inputRendimentoFolhas) inputRendimentoFolhas.value = configuracoes.rendimentoFolhas;
+  document.getElementById("configCustoTanque").value = configuracoes.custoTanque;
+  document.getElementById("configRendimentoFolhas").value = configuracoes.rendimentoFolhas;
 
   document.getElementById("cfgResCustoTanque").textContent = formatCurrency(configuracoes.custoTanque);
   document.getElementById("cfgResRendimento").textContent = `${Number(configuracoes.rendimentoFolhas || 0)} folhas`;
   document.getElementById("cfgResTintaFolha").textContent = formatCurrency(tintaPorFolha);
+}
+
+function resetFormMateria() {
+  document.getElementById("formMateria").reset();
+  document.getElementById("materiaIdEdicao").value = "";
+  document.getElementById("tituloFormMateria").textContent = "Nova matéria-prima";
+  document.getElementById("btnSalvarMateria").textContent = "Salvar matéria-prima";
+  document.getElementById("btnCancelarMateria").classList.add("hidden");
+}
+
+function resetFormPapel() {
+  document.getElementById("formPapel").reset();
+  document.getElementById("papelIdEdicao").value = "";
+  document.getElementById("papelLargura").value = 21;
+  document.getElementById("papelAltura").value = 29.7;
+  document.getElementById("tituloFormPapel").textContent = "Novo papel";
+  document.getElementById("btnSalvarPapel").textContent = "Salvar papel";
+  document.getElementById("btnCancelarPapel").classList.add("hidden");
+}
+
+function resetFormProduto() {
+  document.getElementById("formProduto").reset();
+  document.getElementById("produtoIdEdicao").value = "";
+  document.getElementById("tituloFormProduto").textContent = "Novo produto";
+  document.getElementById("btnSalvarProduto").textContent = "Salvar produto";
+  document.getElementById("btnCancelarProduto").classList.add("hidden");
+  materiasTemporariasProduto = [];
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  atualizarSelects();
 }
 
 function renderMaterias() {
@@ -90,27 +121,39 @@ function renderMaterias() {
 
   lista.innerHTML = `
     <div class="item-list">
-      ${materias
-        .map(
-          (item) => `
-          <div class="row">
-            <div class="row-info">
-              <strong>${item.nome}</strong>
-              <span>Unidade: ${item.unidade}</span>
-              <span>Custo por unidade: ${formatCurrency(item.custo)}</span>
-              ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
-            </div>
-            <div class="row-actions">
-              <button class="btn-danger" onclick="removerMateria('${item.id}')">Excluir</button>
-            </div>
+      ${materias.map((item) => `
+        <div class="row">
+          <div class="row-info">
+            <strong>${item.nome}</strong>
+            <span>Unidade: ${item.unidade}</span>
+            <span>Custo por unidade: ${formatCurrency(item.custo)}</span>
+            ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
           </div>
-        `
-        )
-        .join("")}
+          <div class="row-actions">
+            <button onclick="editarMateria('${item.id}')">Editar</button>
+            <button class="btn-danger" onclick="removerMateria('${item.id}')">Excluir</button>
+          </div>
+        </div>
+      `).join("")}
     </div>
   `;
 
   atualizarSelectMaterias();
+}
+
+function editarMateria(id) {
+  const materias = getData(STORAGE_KEYS.materias);
+  const materia = materias.find((item) => item.id === id);
+  if (!materia) return;
+
+  document.getElementById("materiaIdEdicao").value = materia.id;
+  document.getElementById("materiaNome").value = materia.nome;
+  document.getElementById("materiaUnidade").value = materia.unidade;
+  document.getElementById("materiaCusto").value = materia.custo;
+  document.getElementById("materiaObs").value = materia.observacao || "";
+  document.getElementById("tituloFormMateria").textContent = "Editar matéria-prima";
+  document.getElementById("btnSalvarMateria").textContent = "Atualizar matéria-prima";
+  document.getElementById("btnCancelarMateria").classList.remove("hidden");
 }
 
 function removerMateria(id) {
@@ -136,28 +179,42 @@ function renderPapeis() {
 
   lista.innerHTML = `
     <div class="item-list">
-      ${papeis
-        .map(
-          (papel) => `
-          <div class="row">
-            <div class="row-info">
-              <strong>${papel.nome}</strong>
-              <span>Gramatura: ${papel.gramatura || "-"}</span>
-              <span>Tamanho da folha: ${papel.largura} x ${papel.altura} cm</span>
-              <span>Valor por folha: ${formatCurrency(papel.valorFolha)}</span>
-              ${papel.observacao ? `<span>Obs.: ${papel.observacao}</span>` : ""}
-            </div>
-            <div class="row-actions">
-              <button class="btn-danger" onclick="removerPapel('${papel.id}')">Excluir</button>
-            </div>
+      ${papeis.map((papel) => `
+        <div class="row">
+          <div class="row-info">
+            <strong>${papel.nome}</strong>
+            <span>Gramatura: ${papel.gramatura || "-"}</span>
+            <span>Tamanho da folha: ${papel.largura} x ${papel.altura} cm</span>
+            <span>Valor por folha: ${formatCurrency(papel.valorFolha)}</span>
+            ${papel.observacao ? `<span>Obs.: ${papel.observacao}</span>` : ""}
           </div>
-        `
-        )
-        .join("")}
+          <div class="row-actions">
+            <button onclick="editarPapel('${papel.id}')">Editar</button>
+            <button class="btn-danger" onclick="removerPapel('${papel.id}')">Excluir</button>
+          </div>
+        </div>
+      `).join("")}
     </div>
   `;
 
   atualizarSelects();
+}
+
+function editarPapel(id) {
+  const papeis = getData(STORAGE_KEYS.papeis);
+  const papel = papeis.find((item) => item.id === id);
+  if (!papel) return;
+
+  document.getElementById("papelIdEdicao").value = papel.id;
+  document.getElementById("papelNome").value = papel.nome;
+  document.getElementById("papelGramatura").value = papel.gramatura || "";
+  document.getElementById("papelLargura").value = papel.largura;
+  document.getElementById("papelAltura").value = papel.altura;
+  document.getElementById("papelValor").value = papel.valorFolha;
+  document.getElementById("papelObs").value = papel.observacao || "";
+  document.getElementById("tituloFormPapel").textContent = "Editar papel";
+  document.getElementById("btnSalvarPapel").textContent = "Atualizar papel";
+  document.getElementById("btnCancelarPapel").classList.remove("hidden");
 }
 
 function removerPapel(id) {
@@ -225,24 +282,22 @@ function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
     return;
   }
 
-  container.innerHTML = materiasTemporariasProduto
-    .map((item, index) => {
-      const materia = materias.find((m) => m.id === item.materiaId);
-      const nome = materia ? materia.nome : "Matéria não encontrada";
+  container.innerHTML = materiasTemporariasProduto.map((item, index) => {
+    const materia = materias.find((m) => m.id === item.materiaId);
+    const nome = materia ? materia.nome : "Matéria não encontrada";
 
-      return `
-        <div class="row">
-          <div class="row-info">
-            <strong>${nome}</strong>
-            <span>Quantidade por unidade do produto: ${item.quantidade}</span>
-          </div>
-          <div class="row-actions">
-            <button class="btn-danger" onclick="removerMateriaTemporaria(${index})">Remover</button>
-          </div>
+    return `
+      <div class="row">
+        <div class="row-info">
+          <strong>${nome}</strong>
+          <span>Quantidade por unidade do produto: ${item.quantidade}</span>
         </div>
-      `;
-    })
-    .join("");
+        <div class="row-actions">
+          <button class="btn-danger" onclick="removerMateriaTemporaria(${index})">Remover</button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function removerMateriaTemporaria(index) {
@@ -264,39 +319,61 @@ function renderProdutos() {
 
   lista.innerHTML = `
     <div class="product-list">
-      ${produtos
-        .map((produto) => {
-          const papel = papeis.find((p) => p.id === produto.papelId);
+      ${produtos.map((produto) => {
+        const papel = papeis.find((p) => p.id === produto.papelId);
 
-          const tagsMaterias = produto.materiaisExtras
-            .map((item) => {
-              const materia = materias.find((m) => m.id === item.materiaId);
-              if (!materia) return "";
-              return `<span class="tag">${materia.nome} (${item.quantidade})</span>`;
-            })
-            .join("");
+        const tagsMaterias = produto.materiaisExtras
+          .map((item) => {
+            const materia = materias.find((m) => m.id === item.materiaId);
+            if (!materia) return "";
+            return `<span class="tag">${materia.nome} (${item.quantidade})</span>`;
+          })
+          .join("");
 
-          return `
-            <div class="row">
-              <div class="row-info">
-                <strong>${produto.nome}</strong>
-                <span>Tamanho: ${produto.largura} x ${produto.altura} cm</span>
-                <span>Margem: ${produto.margem} cm</span>
-                <span>Papel padrão: ${papel ? papel.nome : "Não encontrado"}</span>
-                <span>Fixos: ${produto.custoFixo}% | Variáveis: ${produto.custoVariavel}% | Lucro: ${produto.lucro}%</span>
-                <div>${tagsMaterias || '<span class="empty">Sem materiais extras.</span>'}</div>
-              </div>
-              <div class="row-actions">
-                <button class="btn-danger" onclick="removerProduto('${produto.id}')">Excluir</button>
-              </div>
+        return `
+          <div class="row">
+            <div class="row-info">
+              <strong>${produto.nome}</strong>
+              <span>Tamanho: ${produto.largura} x ${produto.altura} cm</span>
+              <span>Margem: ${produto.margem} cm</span>
+              <span>Papel padrão: ${papel ? papel.nome : "Não encontrado"}</span>
+              <span>Fixos: ${produto.custoFixo}% | Variáveis: ${produto.custoVariavel}% | Lucro: ${produto.lucro}%</span>
+              <div>${tagsMaterias || '<span class="empty">Sem materiais extras.</span>'}</div>
             </div>
-          `;
-        })
-        .join("")}
+            <div class="row-actions">
+              <button onclick="editarProduto('${produto.id}')">Editar</button>
+              <button class="btn-danger" onclick="removerProduto('${produto.id}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 
   atualizarSelects();
+}
+
+function editarProduto(id) {
+  const produtos = getData(STORAGE_KEYS.produtos);
+  const produto = produtos.find((item) => item.id === id);
+  if (!produto) return;
+
+  document.getElementById("produtoIdEdicao").value = produto.id;
+  document.getElementById("produtoNome").value = produto.nome;
+  document.getElementById("produtoLargura").value = produto.largura;
+  document.getElementById("produtoAltura").value = produto.altura;
+  document.getElementById("produtoMargem").value = produto.margem;
+  document.getElementById("produtoPapel").value = produto.papelId;
+  document.getElementById("produtoCustoFixo").value = produto.custoFixo;
+  document.getElementById("produtoCustoVariavel").value = produto.custoVariavel;
+  document.getElementById("produtoLucro").value = produto.lucro;
+
+  materiasTemporariasProduto = [...produto.materiaisExtras];
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+
+  document.getElementById("tituloFormProduto").textContent = "Editar produto";
+  document.getElementById("btnSalvarProduto").textContent = "Atualizar produto";
+  document.getElementById("btnCancelarProduto").classList.remove("hidden");
 }
 
 function removerProduto(id) {
@@ -397,6 +474,8 @@ function calcularSimulacao(produtoId, quantidade) {
   const precoSugeridoTotal = precoSugeridoUnitario * Number(quantidade);
 
   return {
+    id: uid(),
+    criadoEm: new Date().toISOString(),
     produto,
     papel,
     orientacao,
@@ -453,10 +532,82 @@ function preencherResultadoSimulacao(resultado) {
     O custo total do papel é <strong>${formatCurrency(resultado.custoTotalPapel)}</strong>,
     o custo total da tinta é <strong>${formatCurrency(resultado.custoTotalTinta)}</strong>,
     e o custo total de impressão fica em <strong>${formatCurrency(resultado.custoTotalImpressao)}</strong>.
-    <br><br>
-    A tinta está sendo calculada em <strong>${formatCurrency(resultado.custoTintaPorFolha)}</strong> por folha,
-    com base nas configurações da impressora.
   `;
+
+  ultimoResultadoSimulacao = resultado;
+  document.getElementById("btnSalvarOrcamento").disabled = false;
+}
+
+function salvarOrcamentoAtual() {
+  if (!ultimoResultadoSimulacao) {
+    alert("Faça uma simulação antes de salvar.");
+    return;
+  }
+
+  const orcamentos = getData(STORAGE_KEYS.orcamentos);
+  orcamentos.unshift(ultimoResultadoSimulacao);
+  setData(STORAGE_KEYS.orcamentos, orcamentos);
+
+  renderOrcamentos();
+  updateDashboard();
+  alert("Orçamento salvo com sucesso.");
+}
+
+function renderOrcamentos() {
+  const lista = document.getElementById("listaOrcamentos");
+  const orcamentos = getData(STORAGE_KEYS.orcamentos);
+
+  if (!orcamentos.length) {
+    lista.innerHTML = `<p class="empty">Nenhum orçamento salvo.</p>`;
+    return;
+  }
+
+  lista.innerHTML = orcamentos.map((orc) => `
+    <div class="orcamento-card">
+      <h4>${orc.produto.nome}</h4>
+      <p><strong>Salvo em:</strong> ${formatDateTime(orc.criadoEm)}</p>
+
+      <div class="orcamento-meta">
+        <span><strong>Quantidade:</strong> ${orc.quantidade}</span>
+        <span><strong>Papel:</strong> ${orc.papel.nome}</span>
+        <span><strong>Cabem por folha:</strong> ${orc.capacidadePorFolha}</span>
+        <span><strong>Folhas necessárias:</strong> ${orc.folhasNecessarias}</span>
+        <span><strong>Aproveitamento:</strong> ${percent(orc.aproveitamentoReal)}</span>
+        <span><strong>Preço unitário:</strong> ${formatCurrency(orc.precoSugeridoUnitario)}</span>
+        <span><strong>Preço total:</strong> ${formatCurrency(orc.precoSugeridoTotal)}</span>
+        <span><strong>Custo total:</strong> ${formatCurrency(orc.custoTotalPedido)}</span>
+      </div>
+
+      <div class="row-actions" style="margin-top:12px;">
+        <button onclick="carregarOrcamento('${orc.id}')">Reabrir</button>
+        <button class="btn-danger" onclick="removerOrcamento('${orc.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function carregarOrcamento(id) {
+  const orcamentos = getData(STORAGE_KEYS.orcamentos);
+  const orcamento = orcamentos.find((item) => item.id === id);
+  if (!orcamento) return;
+
+  preencherResultadoSimulacao(orcamento);
+  document.getElementById("simulacaoProduto").value = orcamento.produto.id;
+  document.getElementById("simulacaoQuantidade").value = orcamento.quantidade;
+
+  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+  document.querySelector('.nav-btn[data-tab="simulacao"]').classList.add("active");
+  document.getElementById("simulacao").classList.add("active");
+}
+
+function removerOrcamento(id) {
+  if (!confirm("Deseja excluir este orçamento?")) return;
+
+  const orcamentos = getData(STORAGE_KEYS.orcamentos).filter((item) => item.id !== id);
+  setData(STORAGE_KEYS.orcamentos, orcamentos);
+  renderOrcamentos();
+  updateDashboard();
 }
 
 document.getElementById("formConfiguracoes").addEventListener("submit", (e) => {
@@ -465,11 +616,7 @@ document.getElementById("formConfiguracoes").addEventListener("submit", (e) => {
   const custoTanque = Number(document.getElementById("configCustoTanque").value);
   const rendimentoFolhas = Number(document.getElementById("configRendimentoFolhas").value);
 
-  setConfiguracoes({
-    custoTanque,
-    rendimentoFolhas,
-  });
-
+  setConfiguracoes({ custoTanque, rendimentoFolhas });
   preencherConfiguracoesTela();
   updateDashboard();
   alert("Configurações salvas com sucesso.");
@@ -479,20 +626,27 @@ document.getElementById("formMateria").addEventListener("submit", (e) => {
   e.preventDefault();
 
   const materias = getData(STORAGE_KEYS.materias);
+  const idEdicao = document.getElementById("materiaIdEdicao").value;
 
-  const novaMateria = {
-    id: uid(),
+  const payload = {
+    id: idEdicao || uid(),
     nome: document.getElementById("materiaNome").value.trim(),
     unidade: document.getElementById("materiaUnidade").value,
     custo: Number(document.getElementById("materiaCusto").value),
     observacao: document.getElementById("materiaObs").value.trim(),
   };
 
-  materias.push(novaMateria);
-  setData(STORAGE_KEYS.materias, materias);
+  if (idEdicao) {
+    const index = materias.findIndex((item) => item.id === idEdicao);
+    materias[index] = payload;
+  } else {
+    materias.push(payload);
+  }
 
-  e.target.reset();
+  setData(STORAGE_KEYS.materias, materias);
+  resetFormMateria();
   renderMaterias();
+  renderProdutos();
   updateDashboard();
 });
 
@@ -500,9 +654,10 @@ document.getElementById("formPapel").addEventListener("submit", (e) => {
   e.preventDefault();
 
   const papeis = getData(STORAGE_KEYS.papeis);
+  const idEdicao = document.getElementById("papelIdEdicao").value;
 
-  const novoPapel = {
-    id: uid(),
+  const payload = {
+    id: idEdicao || uid(),
     nome: document.getElementById("papelNome").value.trim(),
     gramatura: document.getElementById("papelGramatura").value.trim(),
     largura: Number(document.getElementById("papelLargura").value),
@@ -511,14 +666,17 @@ document.getElementById("formPapel").addEventListener("submit", (e) => {
     observacao: document.getElementById("papelObs").value.trim(),
   };
 
-  papeis.push(novoPapel);
+  if (idEdicao) {
+    const index = papeis.findIndex((item) => item.id === idEdicao);
+    papeis[index] = payload;
+  } else {
+    papeis.push(payload);
+  }
+
   setData(STORAGE_KEYS.papeis, papeis);
-
-  e.target.reset();
-  document.getElementById("papelLargura").value = 21;
-  document.getElementById("papelAltura").value = 29.7;
-
+  resetFormPapel();
   renderPapeis();
+  renderProdutos();
   updateDashboard();
 });
 
@@ -539,16 +697,17 @@ document.getElementById("btnAdicionarMateriaProduto").addEventListener("click", 
 document.getElementById("formProduto").addEventListener("submit", (e) => {
   e.preventDefault();
 
+  const produtos = getData(STORAGE_KEYS.produtos);
+  const idEdicao = document.getElementById("produtoIdEdicao").value;
   const papelId = document.getElementById("produtoPapel").value;
+
   if (!papelId) {
     alert("Cadastre e selecione um papel para o produto.");
     return;
   }
 
-  const produtos = getData(STORAGE_KEYS.produtos);
-
-  const novoProduto = {
-    id: uid(),
+  const payload = {
+    id: idEdicao || uid(),
     nome: document.getElementById("produtoNome").value.trim(),
     largura: Number(document.getElementById("produtoLargura").value),
     altura: Number(document.getElementById("produtoAltura").value),
@@ -560,12 +719,15 @@ document.getElementById("formProduto").addEventListener("submit", (e) => {
     materiaisExtras: [...materiasTemporariasProduto],
   };
 
-  produtos.push(novoProduto);
-  setData(STORAGE_KEYS.produtos, produtos);
+  if (idEdicao) {
+    const index = produtos.findIndex((item) => item.id === idEdicao);
+    produtos[index] = payload;
+  } else {
+    produtos.push(payload);
+  }
 
-  e.target.reset();
-  materiasTemporariasProduto = [];
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  setData(STORAGE_KEYS.produtos, produtos);
+  resetFormProduto();
   renderProdutos();
   updateDashboard();
 });
@@ -590,6 +752,11 @@ document.getElementById("formSimulacao").addEventListener("submit", (e) => {
   preencherResultadoSimulacao(resultado);
 });
 
+document.getElementById("btnSalvarOrcamento").addEventListener("click", salvarOrcamentoAtual);
+document.getElementById("btnCancelarMateria").addEventListener("click", resetFormMateria);
+document.getElementById("btnCancelarPapel").addEventListener("click", resetFormPapel);
+document.getElementById("btnCancelarProduto").addEventListener("click", resetFormProduto);
+
 document.querySelectorAll(".nav-btn").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
@@ -613,8 +780,12 @@ function init() {
   renderPapeis();
   renderProdutos();
   r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  renderOrcamentos();
   updateDashboard();
   atualizarSelects();
+  resetFormMateria();
+  resetFormPapel();
+  resetFormProduto();
 }
 
 init();
