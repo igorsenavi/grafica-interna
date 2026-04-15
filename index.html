@@ -1,1 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gráfica Interna</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Gráfica Interna</h1>
+      <nav>
+        <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="materias">Matérias-primas</button>
+        <button class="nav-btn" data-tab="produtos">Produtos</button>
+        <button class="nav-btn" data-tab="papeis">Papéis A4</button>
+        <button class="nav-btn" data-tab="aproveitamento">Aproveitamento</button>
+      </nav>
+    </aside>
 
+    <main class="content">
+      <section id="dashboard" class="tab active">
+        <h2>Dashboard</h2>
+        <div class="cards">
+          <div class="card">
+            <span>Matérias-primas</span>
+            <strong id="totalMaterias">0</strong>
+          </div>
+          <div class="card">
+            <span>Produtos</span>
+            <strong id="totalProdutos">0</strong>
+          </div>
+          <div class="card">
+            <span>Papéis cadastrados</span>
+            <strong id="totalPapeis">0</strong>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Resumo</h3>
+          <p>Essa é a primeira versão do seu sistema interno usando armazenamento local do navegador.</p>
+        </div>
+      </section>
+
+      <section id="materias" class="tab">
+        <h2>Matérias-primas</h2>
+
+        <div class="panel">
+          <h3>Nova matéria-prima</h3>
+          <form id="formMateria" class="form-grid">
+            <div>
+              <label>Nome</label>
+              <input type="text" id="materiaNome" required />
+            </div>
+            <div>
+              <label>Unidade</label>
+              <select id="materiaUnidade" required>
+                <option value="unidade">unidade</option>
+                <option value="folha">folha</option>
+                <option value="metro">metro</option>
+                <option value="grama">grama</option>
+                <option value="caixa">caixa</option>
+              </select>
+            </div>
+            <div>
+              <label>Custo por unidade (R$)</label>
+              <input type="number" id="materiaCusto" step="0.01" min="0" required />
+            </div>
+            <div>
+              <label>Observação</label>
+              <input type="text" id="materiaObs" />
+            </div>
+
+            <div class="full">
+              <button type="submit">Salvar matéria-prima</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Lista de matérias-primas</h3>
+          <div id="listaMaterias"></div>
+        </div>
+      </section>
+
+      <section id="produtos" class="tab">
+        <h2>Produtos</h2>
+
+        <div class="panel">
+          <h3>Novo produto</h3>
+          <form id="formProduto" class="form-grid">
+            <div class="full">
+              <label>Nome do produto</label>
+              <input type="text" id="produtoNome" required />
+            </div>
+
+            <div>
+              <label>Custo fixo (%)</label>
+              <input type="number" id="produtoCustoFixo" step="0.01" min="0" value="0" required />
+            </div>
+
+            <div>
+              <label>Custo variável (%)</label>
+              <input type="number" id="produtoCustoVariavel" step="0.01" min="0" value="0" required />
+            </div>
+
+            <div>
+              <label>Lucro (%)</label>
+              <input type="number" id="produtoLucro" step="0.01" min="0" value="0" required />
+            </div>
+
+            <div class="full">
+              <h4>Adicionar matéria-prima ao produto</h4>
+              <div class="inline-group">
+                <select id="produtoMateriaSelect"></select>
+                <input type="number" id="produtoMateriaQtd" step="0.01" min="0" placeholder="Quantidade" />
+                <button type="button" id="btnAdicionarMateriaProduto">Adicionar</button>
+              </div>
+            </div>
+
+            <div class="full">
+              <div id="materiasDoProduto"></div>
+            </div>
+
+            <div class="full">
+              <button type="submit">Salvar produto</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Lista de produtos</h3>
+          <div id="listaProdutos"></div>
+        </div>
+      </section>
+
+      <section id="papeis" class="tab">
+        <h2>Papéis A4</h2>
+
+        <div class="panel">
+          <h3>Novo papel</h3>
+          <form id="formPapel" class="form-grid">
+            <div>
+              <label>Nome do papel</label>
+              <input type="text" id="papelNome" required />
+            </div>
+            <div>
+              <label>Valor por folha A4 (R$)</label>
+              <input type="number" id="papelValor" step="0.01" min="0" required />
+            </div>
+
+            <div class="full">
+              <button type="submit">Salvar papel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Lista de papéis</h3>
+          <div id="listaPapeis"></div>
+        </div>
+      </section>
+
+      <section id="aproveitamento" class="tab">
+        <h2>Aproveitamento de Papel A4</h2>
+
+        <div class="panel">
+          <form id="formAproveitamento" class="form-grid">
+            <div>
+              <label>Largura do item (cm)</label>
+              <input type="number" id="itemLargura" step="0.01" min="0.01" required />
+            </div>
+            <div>
+              <label>Altura do item (cm)</label>
+              <input type="number" id="itemAltura" step="0.01" min="0.01" required />
+            </div>
+            <div>
+              <label>Margem entre itens (cm)</label>
+              <input type="number" id="itemMargem" step="0.01" min="0" value="0" required />
+            </div>
+            <div>
+              <label>Papel</label>
+              <select id="papelAproveitamentoSelect" required></select>
+            </div>
+
+            <div class="full">
+              <button type="submit">Calcular</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Resultado</h3>
+          <div class="cards">
+            <div class="card">
+              <span>Itens por folha</span>
+              <strong id="resultadoItensFolha">0</strong>
+            </div>
+            <div class="card">
+              <span>Custo por item</span>
+              <strong id="resultadoCustoItem">R$ 0,00</strong>
+            </div>
+            <div class="card">
+              <span>Aproveitamento</span>
+              <strong id="resultadoAproveitamento">0%</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
