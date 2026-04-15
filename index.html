@@ -12,6 +12,7 @@
       <h1>Gráfica Interna</h1>
       <nav>
         <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="configuracoes">Configurações</button>
         <button class="nav-btn" data-tab="materias">Matérias-primas</button>
         <button class="nav-btn" data-tab="papeis">Papéis</button>
         <button class="nav-btn" data-tab="produtos">Produtos</button>
@@ -39,12 +40,71 @@
         </div>
 
         <div class="panel">
-          <h3>Como funciona agora</h3>
+          <h3>Resumo da lógica</h3>
           <p>
-            O papel deixou de ser tratado como matéria-prima comum.
-            O sistema calcula quantos itens cabem na folha, quantas folhas o pedido usa,
-            o aproveitamento real e o custo unitário do papel de acordo com a quantidade informada.
+            O custo de produção por folha agora considera:
+            <strong>papel + tinta</strong>.
+            A tinta é calculada por rendimento médio do tanque e não entra nas porcentagens de custo fixo e variável.
           </p>
+        </div>
+
+        <div class="panel">
+          <h3>Indicadores de impressão</h3>
+          <div class="cards">
+            <div class="card">
+              <span>Custo do tanque</span>
+              <strong id="dashCustoTanque">R$ 0,00</strong>
+            </div>
+            <div class="card">
+              <span>Rendimento</span>
+              <strong id="dashRendimento">0 folhas</strong>
+            </div>
+            <div class="card">
+              <span>Custo de tinta por folha</span>
+              <strong id="dashTintaFolha">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="configuracoes" class="tab">
+        <h2>Configurações de Impressão</h2>
+
+        <div class="panel">
+          <h3>Tinta da impressora</h3>
+          <form id="formConfiguracoes" class="form-grid">
+            <div>
+              <label>Custo para encher o tanque (R$)</label>
+              <input type="number" id="configCustoTanque" step="0.01" min="0" required />
+            </div>
+
+            <div>
+              <label>Rendimento médio (folhas)</label>
+              <input type="number" id="configRendimentoFolhas" step="1" min="1" required />
+            </div>
+
+            <div class="full">
+              <button type="submit">Salvar configurações</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Resumo atual</h3>
+          <div class="result-grid">
+            <div class="result-box">
+              <span>Custo do tanque</span>
+              <strong id="cfgResCustoTanque">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Rendimento médio</span>
+              <strong id="cfgResRendimento">0 folhas</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo de tinta por folha</span>
+              <strong id="cfgResTintaFolha">R$ 0,00</strong>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -270,8 +330,16 @@
               <strong id="resCustoTotalPapel">R$ 0,00</strong>
             </div>
             <div class="result-box">
-              <span>Custo unitário do papel</span>
-              <strong id="resCustoUnitPapel">R$ 0,00</strong>
+              <span>Custo total da tinta</span>
+              <strong id="resCustoTotalTinta">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo total de impressão</span>
+              <strong id="resCustoTotalImpressao">R$ 0,00</strong>
+            </div>
+            <div class="result-box">
+              <span>Custo unitário de impressão</span>
+              <strong id="resCustoUnitImpressao">R$ 0,00</strong>
             </div>
             <div class="result-box">
               <span>Custo unitário materiais extras</span>
