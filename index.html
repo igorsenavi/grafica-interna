@@ -17,6 +17,7 @@
         <button class="nav-btn" data-tab="papeis">Papéis</button>
         <button class="nav-btn" data-tab="produtos">Produtos</button>
         <button class="nav-btn" data-tab="simulacao">Simulação</button>
+        <button class="nav-btn" data-tab="orcamentos">Orçamentos</button>
       </nav>
     </aside>
 
@@ -39,31 +40,27 @@
           </div>
         </div>
 
-        <div class="panel">
-          <h3>Resumo da lógica</h3>
-          <p>
-            O custo de produção por folha agora considera:
-            <strong>papel + tinta</strong>.
-            A tinta é calculada por rendimento médio do tanque e não entra nas porcentagens de custo fixo e variável.
-          </p>
+        <div class="cards">
+          <div class="card">
+            <span>Orçamentos salvos</span>
+            <strong id="totalOrcamentos">0</strong>
+          </div>
+          <div class="card">
+            <span>Custo do tanque</span>
+            <strong id="dashCustoTanque">R$ 0,00</strong>
+          </div>
+          <div class="card">
+            <span>Tinta por folha</span>
+            <strong id="dashTintaFolha">R$ 0,00</strong>
+          </div>
         </div>
 
         <div class="panel">
-          <h3>Indicadores de impressão</h3>
-          <div class="cards">
-            <div class="card">
-              <span>Custo do tanque</span>
-              <strong id="dashCustoTanque">R$ 0,00</strong>
-            </div>
-            <div class="card">
-              <span>Rendimento</span>
-              <strong id="dashRendimento">0 folhas</strong>
-            </div>
-            <div class="card">
-              <span>Custo de tinta por folha</span>
-              <strong id="dashTintaFolha">R$ 0,00</strong>
-            </div>
-          </div>
+          <h3>Resumo da lógica</h3>
+          <p>
+            O custo de produção por folha considera papel + tinta.
+            O custo da tinta vem do rendimento médio do tanque, e os orçamentos podem ser salvos para consulta depois.
+          </p>
         </div>
       </section>
 
@@ -112,8 +109,10 @@
         <h2>Matérias-primas</h2>
 
         <div class="panel">
-          <h3>Nova matéria-prima</h3>
+          <h3 id="tituloFormMateria">Nova matéria-prima</h3>
           <form id="formMateria" class="form-grid">
+            <input type="hidden" id="materiaIdEdicao" />
+
             <div>
               <label>Nome</label>
               <input type="text" id="materiaNome" required />
@@ -140,8 +139,9 @@
               <input type="text" id="materiaObs" />
             </div>
 
-            <div class="full">
-              <button type="submit">Salvar matéria-prima</button>
+            <div class="full form-actions">
+              <button type="submit" id="btnSalvarMateria">Salvar matéria-prima</button>
+              <button type="button" class="btn-secondary hidden" id="btnCancelarMateria">Cancelar edição</button>
             </div>
           </form>
         </div>
@@ -156,8 +156,10 @@
         <h2>Papéis</h2>
 
         <div class="panel">
-          <h3>Novo papel</h3>
+          <h3 id="tituloFormPapel">Novo papel</h3>
           <form id="formPapel" class="form-grid">
+            <input type="hidden" id="papelIdEdicao" />
+
             <div>
               <label>Nome do papel</label>
               <input type="text" id="papelNome" required />
@@ -188,8 +190,9 @@
               <input type="text" id="papelObs" />
             </div>
 
-            <div class="full">
-              <button type="submit">Salvar papel</button>
+            <div class="full form-actions">
+              <button type="submit" id="btnSalvarPapel">Salvar papel</button>
+              <button type="button" class="btn-secondary hidden" id="btnCancelarPapel">Cancelar edição</button>
             </div>
           </form>
         </div>
@@ -204,8 +207,10 @@
         <h2>Produtos</h2>
 
         <div class="panel">
-          <h3>Novo produto</h3>
+          <h3 id="tituloFormProduto">Novo produto</h3>
           <form id="formProduto" class="form-grid">
+            <input type="hidden" id="produtoIdEdicao" />
+
             <div class="full">
               <label>Nome do produto</label>
               <input type="text" id="produtoNome" required />
@@ -259,8 +264,9 @@
               <div id="materiasDoProduto"></div>
             </div>
 
-            <div class="full">
-              <button type="submit">Salvar produto</button>
+            <div class="full form-actions">
+              <button type="submit" id="btnSalvarProduto">Salvar produto</button>
+              <button type="button" class="btn-secondary hidden" id="btnCancelarProduto">Cancelar edição</button>
             </div>
           </form>
         </div>
@@ -364,6 +370,19 @@
           </div>
 
           <div class="simulacao-info" id="resExplicacao"></div>
+
+          <div class="save-budget-box">
+            <button type="button" id="btnSalvarOrcamento" class="btn-success" disabled>Salvar orçamento</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="orcamentos" class="tab">
+        <h2>Orçamentos Salvos</h2>
+
+        <div class="panel">
+          <h3>Lista de orçamentos</h3>
+          <div id="listaOrcamentos"></div>
         </div>
       </section>
     </main>
