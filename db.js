@@ -29,7 +29,10 @@ export async function saveConfiguracoes(payload) {
   if (atual?.id) {
     const { data, error } = await supabase
       .from("configuracoes")
-      .update(payload)
+      .update({
+        custo_tanque: payload.custo_tanque,
+        rendimento_folhas: payload.rendimento_folhas,
+      })
       .eq("id", atual.id)
       .select()
       .single();
@@ -38,9 +41,15 @@ export async function saveConfiguracoes(payload) {
     return data;
   }
 
+  const insertPayload = {
+    user_id: userId,
+    custo_tanque: payload.custo_tanque,
+    rendimento_folhas: payload.rendimento_folhas,
+  };
+
   const { data, error } = await supabase
     .from("configuracoes")
-    .insert([{ ...payload, user_id: userId }])
+    .insert([insertPayload])
     .select()
     .single();
 
@@ -48,7 +57,7 @@ export async function saveConfiguracoes(payload) {
   return data;
 }
 
-/* MATÉRIAS */
+/* MATÉRIAS-PRIMAS */
 export async function listMaterias() {
   const { data, error } = await supabase
     .from("materias_primas")
@@ -79,9 +88,17 @@ export async function upsertMateria(payload) {
     return data;
   }
 
+  const insertPayload = {
+    user_id: userId,
+    nome: payload.nome,
+    unidade: payload.unidade,
+    custo: payload.custo,
+    observacao: payload.observacao,
+  };
+
   const { data, error } = await supabase
     .from("materias_primas")
-    .insert([{ ...payload, user_id: userId }])
+    .insert([insertPayload])
     .select()
     .single();
 
@@ -90,7 +107,11 @@ export async function upsertMateria(payload) {
 }
 
 export async function deleteMateria(id) {
-  const { error } = await supabase.from("materias_primas").delete().eq("id", id);
+  const { error } = await supabase
+    .from("materias_primas")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }
 
@@ -127,9 +148,19 @@ export async function upsertPapel(payload) {
     return data;
   }
 
+  const insertPayload = {
+    user_id: userId,
+    nome: payload.nome,
+    gramatura: payload.gramatura,
+    largura: payload.largura,
+    altura: payload.altura,
+    valor_folha: payload.valor_folha,
+    observacao: payload.observacao,
+  };
+
   const { data, error } = await supabase
     .from("papeis")
-    .insert([{ ...payload, user_id: userId }])
+    .insert([insertPayload])
     .select()
     .single();
 
@@ -138,7 +169,11 @@ export async function upsertPapel(payload) {
 }
 
 export async function deletePapel(id) {
-  const { error } = await supabase.from("papeis").delete().eq("id", id);
+  const { error } = await supabase
+    .from("papeis")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }
 
@@ -170,7 +205,6 @@ export async function listProdutos() {
 
 export async function upsertProduto(payload) {
   const userId = await currentUserId();
-
   let produtoId = payload.id;
 
   if (produtoId) {
@@ -197,19 +231,21 @@ export async function upsertProduto(payload) {
 
     if (delError) throw delError;
   } else {
+    const insertPayload = {
+      user_id: userId,
+      nome: payload.nome,
+      largura: payload.largura,
+      altura: payload.altura,
+      margem: payload.margem,
+      papel_id: payload.papel_id,
+      custo_fixo: payload.custo_fixo,
+      custo_variavel: payload.custo_variavel,
+      lucro: payload.lucro,
+    };
+
     const { data, error } = await supabase
       .from("produtos")
-      .insert([{
-        user_id: userId,
-        nome: payload.nome,
-        largura: payload.largura,
-        altura: payload.altura,
-        margem: payload.margem,
-        papel_id: payload.papel_id,
-        custo_fixo: payload.custo_fixo,
-        custo_variavel: payload.custo_variavel,
-        lucro: payload.lucro,
-      }])
+      .insert([insertPayload])
       .select()
       .single();
 
@@ -225,7 +261,10 @@ export async function upsertProduto(payload) {
       quantidade: item.quantidade,
     }));
 
-    const { error } = await supabase.from("produto_materiais").insert(rows);
+    const { error } = await supabase
+      .from("produto_materiais")
+      .insert(rows);
+
     if (error) throw error;
   }
 
@@ -233,7 +272,11 @@ export async function upsertProduto(payload) {
 }
 
 export async function deleteProduto(id) {
-  const { error } = await supabase.from("produtos").delete().eq("id", id);
+  const { error } = await supabase
+    .from("produtos")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }
 
@@ -251,14 +294,16 @@ export async function listOrcamentos() {
 export async function saveOrcamento(payload) {
   const userId = await currentUserId();
 
+  const insertPayload = {
+    user_id: userId,
+    produto_id: payload.produto.id,
+    quantidade: payload.quantidade,
+    resultado: payload,
+  };
+
   const { data, error } = await supabase
     .from("orcamentos")
-    .insert([{
-      user_id: userId,
-      produto_id: payload.produto.id,
-      quantidade: payload.quantidade,
-      resultado: payload,
-    }])
+    .insert([insertPayload])
     .select()
     .single();
 
@@ -267,6 +312,10 @@ export async function saveOrcamento(payload) {
 }
 
 export async function deleteOrcamento(id) {
-  const { error } = await supabase.from("orcamentos").delete().eq("id", id);
+  const { error } = await supabase
+    .from("orcamentos")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }
