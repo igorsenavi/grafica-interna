@@ -344,14 +344,36 @@ function renderPreviewOrcamento() {
   document.getElementById("previewTotal").textContent = `Total: ${formatCurrency(totalFinal)}`;
 
   const previewItens = document.getElementById("previewItens");
-  previewItens.innerHTML = state.itensOrcamento.length
-    ? state.itensOrcamento.map((item) => `
-      <div class="preview-line">
-        <span>${item.nome} x${item.quantidade}</span>
-        <strong>${formatCurrency(item.valorTotal)}</strong>
+
+  if (!state.itensOrcamento.length) {
+    previewItens.innerHTML = `<p>Nenhum item no orçamento.</p>`;
+    return;
+  }
+
+  previewItens.innerHTML = state.itensOrcamento.map((item) => {
+    const detalhes = item.tipo === "kit" && item.detalhesKit?.length
+      ? `
+        <div style="margin-top:8px; padding-left:12px;">
+          ${item.detalhesKit.map((det) => `
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:13px; color:#475569; padding:4px 0;">
+              <span>• ${det.nome} — ${det.quantidade} un — ${formatCurrency(det.valorUnitario)}</span>
+              <strong>${formatCurrency(det.subtotal)}</strong>
+            </div>
+          `).join("")}
+        </div>
+      `
+      : "";
+
+    return `
+      <div class="preview-line" style="display:block;">
+        <div style="display:flex; justify-content:space-between; gap:12px;">
+          <span>${item.nome} x${item.quantidade}</span>
+          <strong>${formatCurrency(item.valorTotal)}</strong>
+        </div>
+        ${detalhes}
       </div>
-    `).join("")
-    : `<p>Nenhum item no orçamento.</p>`;
+    `;
+  }).join("");
 }
 
 window.editarPapel = (id) => {
@@ -650,11 +672,42 @@ async function init() {
     let nome = "";
     let valorUnitario = 0;
 
-    if (tipo === "produto") {
-      const produto = state.produtos.find((p) => p.id === itemId);
-      if (!produto) return;
-      nome = produto.nome;
-      valorUnitario = calcularValorUnitarioProduto(produto, quantidade);
+   let detalhesKit = [];
+
+if (tipo === "produto") {
+  const produto = state.produtos.find((p) => p.id === itemId);
+  if (!produto) return;
+  nome = produto.nome;
+  valorUnitario = calcularValorUnitarioProduto(produto, quantidade);
+} else {
+  const kit = state.kits.find((k) => k.id === itemId);
+  if (!kit) return;
+
+  nome = kit.nome;
+  valorUnitario = calcularValorUnitarioKit(kit);
+
+  detalhesKit = (kit.itens || []).map((kitItem) => {
+    const produto = state.produtos.find((p) => p.id === kitItem.produto_id);
+    if (!produto) {
+      return {
+        nome: "Produto",
+        quantidade: Number(kitItem.quantidade),
+        valorUnitario: 0,
+        subtotal: 0,
+      };
+    }
+
+    const valorProdUnit = calcularValorUnitarioProduto(produto, kitItem.quantidade);
+    const subtotalProd = valorProdUnit * Number(kitItem.quantidade);
+
+    return {
+      nome: produto.nome,
+      quantidade: Number(kitItem.quantidade),
+      valorUnitario: valorProdUnit,
+      subtotal: subtotalProd,
+    };
+  });
+}
     } else {
       const kit = state.kits.find((k) => k.id === itemId);
       if (!kit) return;
@@ -675,6 +728,7 @@ async function init() {
       desconto: descontoSeguro,
       subtotalBruto,
       valorTotal
+      detalhesKit
     });
 
     document.getElementById("orcamentoQtd").value = 1;
