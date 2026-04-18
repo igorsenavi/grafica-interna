@@ -28,6 +28,7 @@ const state = {
   itensOrcamento: [],
   papelEditandoId: null,
   produtoEditandoId: null,
+  kitEditandoId: null,
 };
 
 function showAuthScreen() {
@@ -188,30 +189,41 @@ function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
 
 window.removeTempMateria = (index) => {
   state.materiaisTemporarios.splice(index, 1);
-  renderMateriaisTemporarios();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 };
 
-function renderMateriaisTemporarios() {
+function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
   const el = document.getElementById("produtosDoKit");
+
   if (!state.kitProdutosTemporarios.length) {
     el.innerHTML = `<p>Nenhum produto adicionado ao kit.</p>`;
     return;
   }
 
-  el.innerHTML = state.kitProdutosTemporarios.map((item, index) => {
-    const produto = state.produtos.find((p) => p.id === item.produto_id);
-    return `
-      <div class="row">
-        <div class="row-info">
-          <strong>${produto?.nome || "Produto"}</strong>
-          <span>Qtd: ${item.quantidade}</span>
-        </div>
-        <div class="row-actions">
-          <button onclick="window.removeTempKitProduto(${index})">Remover</button>
-        </div>
+  el.innerHTML = `
+    <div class="row" style="background:#eff6ff;border-color:#bfdbfe;">
+      <div class="row-info">
+        <strong>Produtos adicionados ao kit</strong>
+        <span>Confira os itens abaixo antes de salvar.</span>
       </div>
-    `;
-  }).join("");
+    </div>
+
+    ${state.kitProdutosTemporarios.map((item, index) => {
+      const produto = state.produtos.find((p) => p.id === item.produto_id);
+
+      return `
+        <div class="row">
+          <div class="row-info">
+            <strong>${produto?.nome || "Produto"}</strong>
+            <span>Quantidade no kit: ${item.quantidade}</span>
+          </div>
+          <div class="row-actions">
+            <button onclick="window.removeTempKitProduto(${index})">Remover</button>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
 }
 
 window.removeTempKitProduto = (index) => {
@@ -221,15 +233,28 @@ window.removeTempKitProduto = (index) => {
 
 function renderKits() {
   const lista = document.getElementById("listaKits");
+
   lista.innerHTML = state.kits.length
-    ? state.kits.map((kit) => `
-      <div class="row">
-        <div class="row-info">
-          <strong>${kit.nome}</strong>
-          <span>${kit.itens.length} item(ns)</span>
-        </div>
-      </div>
-    `).join("")
+    ? state.kits.map((kit) => {
+        const itensHtml = (kit.itens || []).map((item) => {
+          const produto = state.produtos.find((p) => p.id === item.produto_id);
+          return `<span class="tag">${produto?.nome || "Produto"} x${item.quantidade}</span>`;
+        }).join("");
+
+        return `
+          <div class="row">
+            <div class="row-info">
+              <strong>${kit.nome}</strong>
+              <span>${kit.itens.length} item(ns)</span>
+              <div>${itensHtml || '<span class="empty">Sem produtos no kit.</span>'}</div>
+            </div>
+            <div class="row-actions">
+              <button onclick="window.editarKit('${kit.id}')">Editar</button>
+              <button class="btn-secondary" onclick="window.excluirKit('${kit.id}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join("")
     : `<p>Nenhum kit cadastrado.</p>`;
 }
 
@@ -398,6 +423,36 @@ window.excluirProduto = async (id) => {
   await loadData();
 };
 
+window.editarKit = (id) => {
+  const kit = state.kits.find((k) => k.id === id);
+  if (!kit) return;
+
+  document.getElementById("kitNome").value = kit.nome || "";
+  state.kitProdutosTemporarios = [...(kit.itens || [])];
+  state.kitEditandoId = id;
+
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+
+  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+  document.querySelector('.nav-btn[data-tab="kits"]').classList.add("active");
+  document.getElementById("kits").classList.add("active");
+};
+
+window.excluirKit = async (id) => {
+  const confirmar = confirm("Deseja excluir este kit?");
+  if (!confirmar) return;
+
+  const { error } = await supabase.from("kits").delete().eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadData();
+};
+
 async function salvarOrcamentoCompleto() {
   const subtotalBruto = state.itensOrcamento.reduce((acc, item) => acc + item.subtotalBruto, 0);
   const descontoTotal = state.itensOrcamento.reduce((acc, item) => acc + item.desconto, 0);
@@ -545,7 +600,10 @@ async function init() {
     const produtoId = document.getElementById("kitProdutoSelect").value;
     const quantidade = Number(document.getElementById("kitProdutoQtd").value);
 
-    if (!produtoId || !quantidade) return;
+    if (!produtoId || !quantidade || quantidade <= 0) {
+      alert("Selecione um produto e informe uma quantidade válida.");
+      return;
+    }
 
     state.kitProdutosTemporarios.push({
       produto_id: produtoId,
@@ -560,15 +618,22 @@ async function init() {
     e.preventDefault();
 
     const nome = document.getElementById("kitNome").value.trim();
-    if (!nome || !state.kitProdutosTemporarios.length) return;
+    if (!nome || !state.kitProdutosTemporarios.length) {
+      alert("Adicione pelo menos um produto ao kit.");
+      return;
+    }
 
     await upsertKit({
+      id: state.kitEditandoId || undefined,
       nome,
       itens: [...state.kitProdutosTemporarios]
     });
 
     e.target.reset();
     state.kitProdutosTemporarios = [];
+    state.kitEditandoId = null;
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+
     await loadData();
   });
 
