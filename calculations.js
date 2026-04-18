@@ -19,43 +19,37 @@ export function calcularCapacidadeFolha(produto, papel) {
   const larguraComMargem = larguraItem + margem;
   const alturaComMargem = alturaItem + margem;
 
-  const normalColunas = Math.floor(larguraFolha / larguraComMargem);
-  const normalLinhas = Math.floor(alturaFolha / alturaComMargem);
-  const qtdNormal = normalColunas * normalLinhas;
+  const qtdNormal =
+    Math.floor(larguraFolha / larguraComMargem) *
+    Math.floor(alturaFolha / alturaComMargem);
 
-  const rotColunas = Math.floor(larguraFolha / alturaComMargem);
-  const rotLinhas = Math.floor(alturaFolha / larguraComMargem);
-  const qtdRotacionada = rotColunas * rotLinhas;
+  const qtdRot =
+    Math.floor(larguraFolha / alturaComMargem) *
+    Math.floor(alturaFolha / larguraComMargem);
 
-  if (qtdRotacionada > qtdNormal) {
-    return { capacidadePorFolha: qtdRotacionada, orientacao: "Rotacionada" };
-  }
-
-  return { capacidadePorFolha: qtdNormal, orientacao: "Normal" };
+  return qtdRot > qtdNormal
+    ? { capacidadePorFolha: qtdRot, orientacao: "Rotacionada" }
+    : { capacidadePorFolha: qtdNormal, orientacao: "Normal" };
 }
 
 export function calcularCustoMateriaisExtrasUnitario(produto, materias) {
   let total = 0;
-
   for (const item of produto.materiaisExtras || []) {
     const materia = materias.find((m) => m.id === item.materia_id);
-    if (materia) {
-      total += Number(materia.custo) * Number(item.quantidade);
-    }
+    if (materia) total += Number(materia.custo) * Number(item.quantidade);
   }
-
   return total;
 }
 
-export function calcularSimulacao({ produto, papel, materias, configuracoes, quantidade }) {
+export function calcularProdutoUnitario({ produto, papel, materias, configuracoes, quantidade }) {
   const { capacidadePorFolha, orientacao } = calcularCapacidadeFolha(produto, papel);
-
   if (!capacidadePorFolha || capacidadePorFolha <= 0) {
-    throw new Error("Esse item não cabe na folha configurada com as medidas atuais.");
+    throw new Error("Esse item não cabe na folha configurada.");
   }
 
   const custoTintaPorFolha =
-    Number(configuracoes.custo_tanque || 0) / Number(configuracoes.rendimento_folhas || 1);
+    Number(configuracoes.custo_tanque || 0) /
+    Number(configuracoes.rendimento_folhas || 1);
 
   const folhasNecessarias = Math.ceil(Number(quantidade) / capacidadePorFolha);
   const aproveitamentoReal = (Number(quantidade) / (folhasNecessarias * capacidadePorFolha)) * 100;
@@ -69,21 +63,14 @@ export function calcularSimulacao({ produto, papel, materias, configuracoes, qua
   const custoUnitarioExtras = calcularCustoMateriaisExtrasUnitario(produto, materias);
   const subtotalBaseUnitario = custoUnitarioImpressao + custoUnitarioExtras;
 
-  const acrescimoFixo = subtotalBaseUnitario * (Number(produto.custo_fixo) / 100);
-  const acrescimoVariavel = subtotalBaseUnitario * (Number(produto.custo_variavel) / 100);
+  const acrescimoFixo = subtotalBaseUnitario * (Number(configuracoes.custo_fixo_padrao) / 100);
+  const acrescimoVariavel = subtotalBaseUnitario * (Number(configuracoes.custo_variavel_padrao) / 100);
   const subtotalComCustos = subtotalBaseUnitario + acrescimoFixo + acrescimoVariavel;
 
   const lucroUnitario = subtotalComCustos * (Number(produto.lucro) / 100);
   const precoSugeridoUnitario = subtotalComCustos + lucroUnitario;
 
-  const custoTotalPedido = subtotalComCustos * Number(quantidade);
-  const precoSugeridoTotal = precoSugeridoUnitario * Number(quantidade);
-
   return {
-    criado_em: new Date().toISOString(),
-    quantidade: Number(quantidade),
-    produto,
-    papel,
     orientacao,
     capacidadePorFolha,
     folhasNecessarias,
@@ -96,8 +83,5 @@ export function calcularSimulacao({ produto, papel, materias, configuracoes, qua
     custoUnitarioExtras,
     subtotalComCustos,
     precoSugeridoUnitario,
-    custoTotalPedido,
-    precoSugeridoTotal,
-    custoTintaPorFolha,
   };
 }
