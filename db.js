@@ -32,6 +32,8 @@ export async function saveConfiguracoes(payload) {
       .update({
         custo_tanque: payload.custo_tanque,
         rendimento_folhas: payload.rendimento_folhas,
+        custo_fixo_padrao: payload.custo_fixo_padrao,
+        custo_variavel_padrao: payload.custo_variavel_padrao,
       })
       .eq("id", atual.id)
       .select()
@@ -45,6 +47,8 @@ export async function saveConfiguracoes(payload) {
     user_id: userId,
     custo_tanque: payload.custo_tanque,
     rendimento_folhas: payload.rendimento_folhas,
+    custo_fixo_padrao: payload.custo_fixo_padrao,
+    custo_variavel_padrao: payload.custo_variavel_padrao,
   };
 
   const { data, error } = await supabase
@@ -57,7 +61,7 @@ export async function saveConfiguracoes(payload) {
   return data;
 }
 
-/* MATÉRIAS-PRIMAS */
+/* MATÉRIAS */
 export async function listMaterias() {
   const { data, error } = await supabase
     .from("materias_primas")
@@ -104,15 +108,6 @@ export async function upsertMateria(payload) {
 
   if (error) throw error;
   return data;
-}
-
-export async function deleteMateria(id) {
-  const { error } = await supabase
-    .from("materias_primas")
-    .delete()
-    .eq("id", id);
-
-  if (error) throw error;
 }
 
 /* PAPÉIS */
@@ -168,15 +163,6 @@ export async function upsertPapel(payload) {
   return data;
 }
 
-export async function deletePapel(id) {
-  const { error } = await supabase
-    .from("papeis")
-    .delete()
-    .eq("id", id);
-
-  if (error) throw error;
-}
-
 /* PRODUTOS */
 export async function listProdutos() {
   const { data: produtos, error } = await supabase
@@ -185,7 +171,6 @@ export async function listProdutos() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-
   if (!produtos?.length) return [];
 
   const ids = produtos.map((p) => p.id);
@@ -271,51 +256,141 @@ export async function upsertProduto(payload) {
   return produtoId;
 }
 
-export async function deleteProduto(id) {
-  const { error } = await supabase
-    .from("produtos")
-    .delete()
-    .eq("id", id);
+/* KITS */
+export async function listKits() {
+  const { data: kits, error } = await supabase
+    .from("kits")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   if (error) throw error;
+  if (!kits?.length) return [];
+
+  const ids = kits.map((k) => k.id);
+
+  const { data: itens, error: errorItens } = await supabase
+    .from("kit_itens")
+    .select("*")
+    .in("kit_id", ids);
+
+  if (errorItens) throw errorItens;
+
+  return kits.map((kit) => ({
+    ...kit,
+    itens: (itens ?? []).filter((i) => i.kit_id === kit.id),
+  }));
+}
+
+export async function upsertKit(payload) {
+  const userId = await currentUserId();
+  let kitId = payload.id;
+
+  if (kitId) {
+    const { error } = await supabase
+      .from("kits")
+      .update({ nome: payload.nome })
+      .eq("id", kitId);
+
+    if (error) throw error;
+
+    const { error: delError } = await supabase
+      .from("kit_itens")
+      .delete()
+      .eq("kit_id", kitId);
+
+    if (delError) throw delError;
+  } else {
+    const { data, error } = await supabase
+      .from("kits")
+      .insert([{ user_id: userId, nome: payload.nome }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    kitId = data.id;
+  }
+
+  if (payload.itens?.length) {
+    const rows = payload.itens.map((item) => ({
+      user_id: userId,
+      kit_id: kitId,
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+    }));
+
+    const { error } = await supabase.from("kit_itens").insert(rows);
+    if (error) throw error;
+  }
+
+  return kitId;
 }
 
 /* ORÇAMENTOS */
 export async function listOrcamentos() {
-  const { data, error } = await supabase
+  const { data: orcamentos, error } = await supabase
     .from("orcamentos")
     .select("*")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  if (!orcamentos?.length) return [];
+
+  const ids = orcamentos.map((o) => o.id);
+
+  const { data: itens, error: errorItens } = await supabase
+    .from("orcamento_itens")
+    .select("*")
+    .in("orcamento_id", ids);
+
+  if (errorItens) throw errorItens;
+
+  return orcamentos.map((orcamento) => ({
+    ...orcamento,
+    itens: (itens ?? []).filter((i) => i.orcamento_id === orcamento.id),
+  }));
 }
 
 export async function saveOrcamento(payload) {
   const userId = await currentUserId();
 
-  const insertPayload = {
-    user_id: userId,
-    produto_id: payload.produto.id,
-    quantidade: payload.quantidade,
-    resultado: payload,
-  };
-
-  const { data, error } = await supabase
+  const { data: orcamento, error } = await supabase
     .from("orcamentos")
-    .insert([insertPayload])
+    .insert([{
+      user_id: userId,
+      produto_id: null,
+      quantidade: 0,
+      resultado: payload,
+      cliente: payload.cliente || "",
+      observacao: payload.observacao || "",
+      subtotal_bruto: payload.subtotalBruto || 0,
+      desconto_total: payload.descontoTotal || 0,
+      total_final: payload.totalFinal || 0,
+    }])
     .select()
     .single();
 
   if (error) throw error;
-  return data;
-}
 
-export async function deleteOrcamento(id) {
-  const { error } = await supabase
-    .from("orcamentos")
-    .delete()
-    .eq("id", id);
+  if (payload.itens?.length) {
+    const rows = payload.itens.map((item) => ({
+      user_id: userId,
+      orcamento_id: orcamento.id,
+      tipo: item.tipo,
+      referencia_id: item.itemId,
+      nome: item.nome,
+      quantidade: item.quantidade,
+      valor_unitario: item.valorUnitario,
+      desconto: item.desconto,
+      subtotal_bruto: item.subtotalBruto,
+      valor_total: item.valorTotal,
+    }));
 
-  if (error) throw error;
+    const { error: itensError } = await supabase
+      .from("orcamento_itens")
+      .insert(rows);
+
+    if (itensError) throw itensError;
+  }
+
+  return orcamento;
 }
