@@ -1,191 +1,366 @@
-import { signIn, signOut, getSession, getUser, onAuthStateChange } from "./auth.js";
+import { getSession, getUser, signIn, signOut, onAuthStateChange } from "./auth.js";
 import {
   fetchConfiguracoes,
   saveConfiguracoes,
   listMaterias,
   upsertMateria,
-  deleteMateria,
   listPapeis,
   upsertPapel,
-  deletePapel,
   listProdutos,
-  upsertProduto,
-  deleteProduto,
-  listOrcamentos,
-  saveOrcamento,
-  deleteOrcamento,
+  upsertProduto
 } from "./db.js";
-import { calcularSimulacao } from "./calculations.js";
-import {
-  showAuthScreen,
-  showAppScreen,
-  setAuthMessage,
-  bindTabs,
-  renderDashboard,
-  fillConfiguracoes,
-  fillSelects,
-  renderMaterias,
-  renderPapeis,
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7,
-  renderProdutos,
-  renderResultado,
-  renderOrcamentos,
-} from "./ui.js";
+import { formatCurrency, calcularProdutoUnitario } from "./calculations.js";
 
 const state = {
   configuracoes: null,
   materias: [],
   papeis: [],
   produtos: [],
-  orcamentos: [],
+  kits: [],
   materiaisTemporarios: [],
-  ultimoResultado: null,
+  kitProdutosTemporarios: [],
+  itensOrcamento: [],
 };
 
-function resetMateriaForm() {
-  document.getElementById("formMateria").reset();
-  document.getElementById("materiaIdEdicao").value = "";
-  document.getElementById("tituloFormMateria").textContent = "Nova matéria-prima";
-  document.getElementById("btnSalvarMateria").textContent = "Salvar matéria-prima";
-  document.getElementById("btnCancelarMateria").classList.add("hidden");
+function showAuthScreen() {
+  document.getElementById("authScreen").classList.remove("hidden");
+  document.getElementById("appScreen").classList.add("hidden");
 }
 
-function resetPapelForm() {
-  document.getElementById("formPapel").reset();
-  document.getElementById("papelIdEdicao").value = "";
-  document.getElementById("papelLargura").value = 21;
-  document.getElementById("papelAltura").value = 29.7;
-  document.getElementById("tituloFormPapel").textContent = "Novo papel";
-  document.getElementById("btnSalvarPapel").textContent = "Salvar papel";
-  document.getElementById("btnCancelarPapel").classList.add("hidden");
+function showAppScreen(email) {
+  document.getElementById("authScreen").classList.add("hidden");
+  document.getElementById("appScreen").classList.remove("hidden");
+  document.getElementById("currentUserEmail").textContent = email || "";
 }
 
-function resetProdutoForm() {
-  document.getElementById("formProduto").reset();
-  document.getElementById("produtoIdEdicao").value = "";
-  document.getElementById("tituloFormProduto").textContent = "Novo produto";
-  document.getElementById("btnSalvarProduto").textContent = "Salvar produto";
-  document.getElementById("btnCancelarProduto").classList.add("hidden");
-  state.materiaisTemporarios = [];
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7(state.materiaisTemporarios, state.materias, onRemoveTempMaterial);
+function bindTabs() {
+  document.querySelectorAll(".nav-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById(button.dataset.tab).classList.add("active");
+    });
+  });
 }
 
-async function loadAppData() {
+async function loadData() {
   state.configuracoes = await fetchConfiguracoes();
   state.materias = await listMaterias();
   state.papeis = await listPapeis();
   state.produtos = await listProdutos();
-  state.orcamentos = await listOrcamentos();
+  renderAll();
+}
 
-  fillConfiguracoes(state.configuracoes);
-  fillSelects(state);
-  renderDashboard(state);
-  renderMaterias(state.materias, { onEdit: onEditMateria, onDelete: onDeleteMateria });
-  renderPapeis(state.papeis, { onEdit: onEditPapel, onDelete: onDeletePapel });
-  renderProdutos(state.produtos, state.papeis, state.materias, {
-    onEdit: onEditProduto,
-    onDelete: onDeleteProduto,
+function renderAll() {
+  document.getElementById("totalProdutos").textContent = state.produtos.length;
+  document.getElementById("totalKits").textContent = state.kits.length;
+  document.getElementById("totalOrcamentos").textContent = state.itensOrcamento.length ? 1 : 0;
+
+  const tintaPorFolha =
+    Number(state.configuracoes?.custo_tanque || 0) /
+    Number(state.configuracoes?.rendimento_folhas || 1);
+
+  document.getElementById("dashTintaFolha").textContent = formatCurrency(tintaPorFolha);
+
+  document.getElementById("configCustoTanque").value = state.configuracoes?.custo_tanque ?? 160;
+  document.getElementById("configRendimentoFolhas").value = state.configuracoes?.rendimento_folhas ?? 1000;
+  document.getElementById("configCustoFixoPadrao").value = state.configuracoes?.custo_fixo_padrao ?? 3;
+  document.getElementById("configCustoVariavelPadrao").value = state.configuracoes?.custo_variavel_padrao ?? 38;
+
+  renderMaterias();
+  renderPapeis();
+  renderProdutos();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  renderKits();
+  renderOrcamentoSelects();
+  renderTabelaOrcamento();
+  renderPreviewOrcamento();
+}
+
+function renderMaterias() {
+  const lista = document.getElementById("listaMaterias");
+  const select = document.getElementById("produtoMateriaSelect");
+
+  lista.innerHTML = state.materias.length
+    ? state.materias.map((item) => `
+      <div class="row">
+        <div class="row-info">
+          <strong>${item.nome}</strong>
+          <span>${item.unidade} • ${formatCurrency(item.custo)}</span>
+        </div>
+      </div>
+    `).join("")
+    : `<p>Nenhuma matéria-prima cadastrada.</p>`;
+
+  select.innerHTML = state.materias.length
+    ? state.materias.map((item) => `<option value="${item.id}">${item.nome}</option>`).join("")
+    : `<option value="">Cadastre primeiro</option>`;
+}
+
+function renderPapeis() {
+  const lista = document.getElementById("listaPapeis");
+  const select = document.getElementById("produtoPapel");
+
+  lista.innerHTML = state.papeis.length
+    ? state.papeis.map((item) => `
+      <div class="row">
+        <div class="row-info">
+          <strong>${item.nome}</strong>
+          <span>${item.largura} x ${item.altura} cm • ${formatCurrency(item.valor_folha)}</span>
+        </div>
+      </div>
+    `).join("")
+    : `<p>Nenhum papel cadastrado.</p>`;
+
+  select.innerHTML = state.papeis.length
+    ? state.papeis.map((item) => `<option value="${item.id}">${item.nome}</option>`).join("")
+    : `<option value="">Cadastre primeiro</option>`;
+}
+
+function renderProdutos() {
+  const lista = document.getElementById("listaProdutos");
+  const kitSelect = document.getElementById("kitProdutoSelect");
+
+  lista.innerHTML = state.produtos.length
+    ? state.produtos.map((item) => `
+      <div class="row">
+        <div class="row-info">
+          <strong>${item.nome}</strong>
+          <span>${item.largura} x ${item.altura} cm • lucro ${item.lucro}%</span>
+        </div>
+      </div>
+    `).join("")
+    : `<p>Nenhum produto cadastrado.</p>`;
+
+  if (kitSelect) {
+    kitSelect.innerHTML = state.produtos.length
+      ? state.produtos.map((item) => `<option value="${item.id}">${item.nome}</option>`).join("")
+      : `<option value="">Cadastre um produto primeiro</option>`;
+  }
+}
+
+function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
+  const el = document.getElementById("materiasDoProduto");
+  if (!state.materiaisTemporarios.length) {
+    el.innerHTML = `<p>Nenhum material extra adicionado.</p>`;
+    return;
+  }
+
+  el.innerHTML = state.materiaisTemporarios.map((item, index) => {
+    const materia = state.materias.find((m) => m.id === item.materia_id);
+    return `
+      <div class="row">
+        <div class="row-info">
+          <strong>${materia?.nome || "Matéria"}</strong>
+          <span>Qtd: ${item.quantidade}</span>
+        </div>
+        <div class="row-actions">
+          <button onclick="window.removeTempMateria(${index})">Remover</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+window.removeTempMateria = (index) => {
+  state.materiaisTemporarios.splice(index, 1);
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+};
+
+function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
+  const el = document.getElementById("produtosDoKit");
+  if (!state.kitProdutosTemporarios.length) {
+    el.innerHTML = `<p>Nenhum produto adicionado ao kit.</p>`;
+    return;
+  }
+
+  el.innerHTML = state.kitProdutosTemporarios.map((item, index) => {
+    const produto = state.produtos.find((p) => p.id === item.produto_id);
+    return `
+      <div class="row">
+        <div class="row-info">
+          <strong>${produto?.nome || "Produto"}</strong>
+          <span>Qtd: ${item.quantidade}</span>
+        </div>
+        <div class="row-actions">
+          <button onclick="window.removeTempKitProduto(${index})">Remover</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+window.removeTempKitProduto = (index) => {
+  state.kitProdutosTemporarios.splice(index, 1);
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+};
+
+function renderKits() {
+  const lista = document.getElementById("listaKits");
+  lista.innerHTML = state.kits.length
+    ? state.kits.map((kit) => `
+      <div class="row">
+        <div class="row-info">
+          <strong>${kit.nome}</strong>
+          <span>${kit.itens.length} item(ns)</span>
+        </div>
+      </div>
+    `).join("")
+    : `<p>Nenhum kit cadastrado.</p>`;
+}
+
+function renderOrcamentoSelects() {
+  const tipo = document.getElementById("orcamentoTipo").value;
+  const select = document.getElementById("orcamentoItemSelect");
+
+  if (tipo === "produto") {
+    select.innerHTML = state.produtos.length
+      ? state.produtos.map((p) => `<option value="${p.id}">${p.nome}</option>`).join("")
+      : `<option value="">Cadastre um produto primeiro</option>`;
+  } else {
+    select.innerHTML = state.kits.length
+      ? state.kits.map((k) => `<option value="${k.id}">${k.nome}</option>`).join("")
+      : `<option value="">Cadastre um kit primeiro</option>`;
+  }
+}
+
+function calcularValorUnitarioProduto(produto, quantidade) {
+  const papel = state.papeis.find((p) => p.id === produto.papel_id);
+  const calc = calcularProdutoUnitario({
+    produto,
+    papel,
+    materias: state.materias,
+    configuracoes: state.configuracoes,
+    quantidade
   });
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7(state.materiaisTemporarios, state.materias, onRemoveTempMaterial);
-  renderOrcamentos(state.orcamentos, { onOpen: onOpenOrcamento, onDelete: onDeleteOrcamento });
+
+  return calc.precoSugeridoUnitario;
+}
+
+function calcularValorUnitarioKit(kit) {
+  let total = 0;
+
+  for (const item of kit.itens) {
+    const produto = state.produtos.find((p) => p.id === item.produto_id);
+    if (!produto) continue;
+
+    const valorUnit = calcularValorUnitarioProduto(produto, item.quantidade);
+    total += valorUnit * Number(item.quantidade);
+  }
+
+  return total;
+}
+
+function renderTabelaOrcamento() {
+  const body = document.getElementById("orcamentoTabelaBody");
+
+  if (!state.itensOrcamento.length) {
+    body.innerHTML = `<tr><td colspan="7">Nenhum item adicionado.</td></tr>`;
+  } else {
+    body.innerHTML = state.itensOrcamento.map((item, index) => `
+      <tr>
+        <td>${item.nome}</td>
+        <td>${item.tipo}</td>
+        <td>${item.quantidade}</td>
+        <td>${formatCurrency(item.valorUnitario)}</td>
+        <td>${formatCurrency(item.desconto)}</td>
+        <td>${formatCurrency(item.valorTotal)}</td>
+        <td><button onclick="window.removerItemOrcamento(${index})">Remover</button></td>
+      </tr>
+    `).join("");
+  }
+
+  const subtotalBruto = state.itensOrcamento.reduce((acc, item) => acc + item.subtotalBruto, 0);
+  const descontoTotal = state.itensOrcamento.reduce((acc, item) => acc + item.desconto, 0);
+  const totalFinal = state.itensOrcamento.reduce((acc, item) => acc + item.valorTotal, 0);
+
+  document.getElementById("orcSubtotalBruto").textContent = formatCurrency(subtotalBruto);
+  document.getElementById("orcDescontoTotal").textContent = formatCurrency(descontoTotal);
+  document.getElementById("orcTotalFinal").textContent = formatCurrency(totalFinal);
+}
+
+window.removerItemOrcamento = (index) => {
+  state.itensOrcamento.splice(index, 1);
+  renderTabelaOrcamento();
+  renderPreviewOrcamento();
+};
+
+function renderPreviewOrcamento() {
+  const cliente = document.getElementById("orcamentoCliente").value || "-";
+  const observacao = document.getElementById("orcamentoObservacao").value || "-";
+  const totalFinal = state.itensOrcamento.reduce((acc, item) => acc + item.valorTotal, 0);
+
+  document.getElementById("previewCliente").textContent = `Cliente: ${cliente}`;
+  document.getElementById("previewObservacao").textContent = `Observação: ${observacao}`;
+  document.getElementById("previewTotal").textContent = `Total: ${formatCurrency(totalFinal)}`;
+
+  const previewItens = document.getElementById("previewItens");
+  previewItens.innerHTML = state.itensOrcamento.length
+    ? state.itensOrcamento.map((item) => `
+      <div class="preview-line">
+        <span>${item.nome} x${item.quantidade}</span>
+        <strong>${formatCurrency(item.valorTotal)}</strong>
+      </div>
+    `).join("")
+    : `<p>Nenhum item no orçamento.</p>`;
 }
 
 async function bootAuthenticated() {
   const user = await getUser();
   showAppScreen(user?.email || "");
-  await loadAppData();
+  await loadData();
 }
 
-async function handleLogin(event) {
-  event.preventDefault();
-  setAuthMessage("");
+async function init() {
+  bindTabs();
 
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value;
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await signIn(
+        document.getElementById("loginEmail").value.trim(),
+        document.getElementById("loginPassword").value
+      );
+      await bootAuthenticated();
+    } catch (error) {
+      document.getElementById("authMessage").textContent = error.message || "Erro ao entrar.";
+    }
+  });
 
-  try {
-    await signIn(email, password);
-    await bootAuthenticated();
-  } catch (error) {
-    setAuthMessage(error.message || "Falha ao entrar.");
-  }
-}
-
-async function handleLogout() {
-  try {
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
     await signOut();
     showAuthScreen();
-  } catch (error) {
-    alert(error.message || "Erro ao sair.");
-  }
-}
+  });
 
-async function handleConfiguracoes(event) {
-  event.preventDefault();
-
-  try {
+  document.getElementById("formConfiguracoes").addEventListener("submit", async (e) => {
+    e.preventDefault();
     state.configuracoes = await saveConfiguracoes({
       custo_tanque: Number(document.getElementById("configCustoTanque").value),
       rendimento_folhas: Number(document.getElementById("configRendimentoFolhas").value),
+      custo_fixo_padrao: Number(document.getElementById("configCustoFixoPadrao").value),
+      custo_variavel_padrao: Number(document.getElementById("configCustoVariavelPadrao").value),
     });
-
-    renderDashboard(state);
-    fillConfiguracoes(state.configuracoes);
+    renderAll();
     alert("Configurações salvas.");
-  } catch (error) {
-    alert(error.message);
-  }
-}
+  });
 
-async function handleMateria(event) {
-  event.preventDefault();
-
-  try {
+  document.getElementById("formMateria").addEventListener("submit", async (e) => {
+    e.preventDefault();
     await upsertMateria({
-      id: document.getElementById("materiaIdEdicao").value || undefined,
       nome: document.getElementById("materiaNome").value.trim(),
       unidade: document.getElementById("materiaUnidade").value,
       custo: Number(document.getElementById("materiaCusto").value),
       observacao: document.getElementById("materiaObs").value.trim(),
     });
+    e.target.reset();
+    await loadData();
+  });
 
-    resetMateriaForm();
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-function onEditMateria(id) {
-  const item = state.materias.find((m) => m.id === id);
-  if (!item) return;
-
-  document.getElementById("materiaIdEdicao").value = item.id;
-  document.getElementById("materiaNome").value = item.nome;
-  document.getElementById("materiaUnidade").value = item.unidade;
-  document.getElementById("materiaCusto").value = item.custo;
-  document.getElementById("materiaObs").value = item.observacao || "";
-  document.getElementById("tituloFormMateria").textContent = "Editar matéria-prima";
-  document.getElementById("btnSalvarMateria").textContent = "Atualizar matéria-prima";
-  document.getElementById("btnCancelarMateria").classList.remove("hidden");
-}
-
-async function onDeleteMateria(id) {
-  if (!confirm("Deseja excluir esta matéria-prima?")) return;
-  try {
-    await deleteMateria(id);
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function handlePapel(event) {
-  event.preventDefault();
-
-  try {
+  document.getElementById("formPapel").addEventListener("submit", async (e) => {
+    e.preventDefault();
     await upsertPapel({
-      id: document.getElementById("papelIdEdicao").value || undefined,
       nome: document.getElementById("papelNome").value.trim(),
       gramatura: document.getElementById("papelGramatura").value.trim(),
       largura: Number(document.getElementById("papelLargura").value),
@@ -193,212 +368,129 @@ async function handlePapel(event) {
       valor_folha: Number(document.getElementById("papelValor").value),
       observacao: document.getElementById("papelObs").value.trim(),
     });
-
-    resetPapelForm();
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-function onEditPapel(id) {
-  const item = state.papeis.find((p) => p.id === id);
-  if (!item) return;
-
-  document.getElementById("papelIdEdicao").value = item.id;
-  document.getElementById("papelNome").value = item.nome;
-  document.getElementById("papelGramatura").value = item.gramatura || "";
-  document.getElementById("papelLargura").value = item.largura;
-  document.getElementById("papelAltura").value = item.altura;
-  document.getElementById("papelValor").value = item.valor_folha;
-  document.getElementById("papelObs").value = item.observacao || "";
-  document.getElementById("tituloFormPapel").textContent = "Editar papel";
-  document.getElementById("btnSalvarPapel").textContent = "Atualizar papel";
-  document.getElementById("btnCancelarPapel").classList.remove("hidden");
-}
-
-async function onDeletePapel(id) {
-  if (!confirm("Deseja excluir este papel?")) return;
-  try {
-    await deletePapel(id);
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-function onAddTempMaterial() {
-  const materiaId = document.getElementById("produtoMateriaSelect").value;
-  const quantidade = Number(document.getElementById("produtoMateriaQtd").value);
-
-  if (!materiaId || !quantidade || quantidade <= 0) {
-    alert("Selecione uma matéria-prima e informe uma quantidade válida.");
-    return;
-  }
-
-  state.materiaisTemporarios.push({
-    materia_id: materiaId,
-    quantidade,
+    e.target.reset();
+    document.getElementById("papelLargura").value = 21;
+    document.getElementById("papelAltura").value = 29.7;
+    await loadData();
   });
 
-  document.getElementById("produtoMateriaQtd").value = "";
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7(state.materiaisTemporarios, state.materias, onRemoveTempMaterial);
-}
+  document.getElementById("btnAdicionarMateriaProduto").addEventListener("click", () => {
+    const materiaId = document.getElementById("produtoMateriaSelect").value;
+    const quantidade = Number(document.getElementById("produtoMateriaQtd").value);
 
-function onRemoveTempMaterial(index) {
-  state.materiaisTemporarios.splice(index, 1);
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7(state.materiaisTemporarios, state.materias, onRemoveTempMaterial);
-}
+    if (!materiaId || !quantidade) return;
 
-async function handleProduto(event) {
-  event.preventDefault();
+    state.materiaisTemporarios.push({
+      materia_id: materiaId,
+      quantidade,
+    });
 
-  try {
+    document.getElementById("produtoMateriaQtd").value = "";
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  });
+
+  document.getElementById("formProduto").addEventListener("submit", async (e) => {
+    e.preventDefault();
     await upsertProduto({
-      id: document.getElementById("produtoIdEdicao").value || undefined,
       nome: document.getElementById("produtoNome").value.trim(),
       largura: Number(document.getElementById("produtoLargura").value),
       altura: Number(document.getElementById("produtoAltura").value),
       margem: Number(document.getElementById("produtoMargem").value),
       papel_id: document.getElementById("produtoPapel").value,
-      custo_fixo: Number(document.getElementById("produtoCustoFixo").value),
-      custo_variavel: Number(document.getElementById("produtoCustoVariavel").value),
+      custo_fixo: Number(state.configuracoes.custo_fixo_padrao),
+      custo_variavel: Number(state.configuracoes.custo_variavel_padrao),
       lucro: Number(document.getElementById("produtoLucro").value),
-      materiaisExtras: state.materiaisTemporarios,
+      materiaisExtras: [...state.materiaisTemporarios],
     });
 
-    resetProdutoForm();
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
+    e.target.reset();
+    state.materiaisTemporarios = [];
+    await loadData();
+  });
 
-function onEditProduto(id) {
-  const item = state.produtos.find((p) => p.id === id);
-  if (!item) return;
+  document.getElementById("btnAdicionarProdutoKit").addEventListener("click", () => {
+    const produtoId = document.getElementById("kitProdutoSelect").value;
+    const quantidade = Number(document.getElementById("kitProdutoQtd").value);
 
-  document.getElementById("produtoIdEdicao").value = item.id;
-  document.getElementById("produtoNome").value = item.nome;
-  document.getElementById("produtoLargura").value = item.largura;
-  document.getElementById("produtoAltura").value = item.altura;
-  document.getElementById("produtoMargem").value = item.margem;
-  document.getElementById("produtoPapel").value = item.papel_id;
-  document.getElementById("produtoCustoFixo").value = item.custo_fixo;
-  document.getElementById("produtoCustoVariavel").value = item.custo_variavel;
-  document.getElementById("produtoLucro").value = item.lucro;
-  state.materiaisTemporarios = [...(item.materiaisExtras || [])];
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7(state.materiaisTemporarios, state.materias, onRemoveTempMaterial);
-  document.getElementById("tituloFormProduto").textContent = "Editar produto";
-  document.getElementById("btnSalvarProduto").textContent = "Atualizar produto";
-  document.getElementById("btnCancelarProduto").classList.remove("hidden");
-}
+    if (!produtoId || !quantidade) return;
 
-async function onDeleteProduto(id) {
-  if (!confirm("Deseja excluir este produto?")) return;
-  try {
-    await deleteProduto(id);
-    await loadAppData();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function handleSimulacao(event) {
-  event.preventDefault();
-
-  try {
-    const produtoId = document.getElementById("simulacaoProduto").value;
-    const quantidade = Number(document.getElementById("simulacaoQuantidade").value);
-
-    const produto = state.produtos.find((p) => p.id === produtoId);
-    if (!produto) throw new Error("Produto não encontrado.");
-
-    const papel = state.papeis.find((p) => p.id === produto.papel_id);
-    if (!papel) throw new Error("Papel não encontrado.");
-
-    const resultado = calcularSimulacao({
-      produto,
-      papel,
-      materias: state.materias,
-      configuracoes: state.configuracoes,
-      quantidade,
+    state.kitProdutosTemporarios.push({
+      produto_id: produtoId,
+      quantidade
     });
 
-    state.ultimoResultado = resultado;
-    renderResultado(resultado);
-  } catch (error) {
-    alert(error.message);
-  }
-}
+    document.getElementById("kitProdutoQtd").value = "";
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  });
 
-async function handleSalvarOrcamento() {
-  if (!state.ultimoResultado) {
-    alert("Faça uma simulação antes.");
-    return;
-  }
+  document.getElementById("formKit").addEventListener("submit", (e) => {
+    e.preventDefault();
 
-  try {
-    await saveOrcamento(state.ultimoResultado);
-    state.orcamentos = await listOrcamentos();
-    renderOrcamentos(state.orcamentos, { onOpen: onOpenOrcamento, onDelete: onDeleteOrcamento });
-    renderDashboard(state);
-    alert("Orçamento salvo.");
-  } catch (error) {
-    alert(error.message);
-  }
-}
+    const nome = document.getElementById("kitNome").value.trim();
+    if (!nome || !state.kitProdutosTemporarios.length) return;
 
-function onOpenOrcamento(id) {
-  const row = state.orcamentos.find((o) => o.id === id);
-  if (!row) return;
+    state.kits.push({
+      id: crypto.randomUUID(),
+      nome,
+      itens: [...state.kitProdutosTemporarios]
+    });
 
-  state.ultimoResultado = row.resultado;
-  renderResultado(row.resultado);
-  document.getElementById("simulacaoProduto").value = row.resultado.produto.id;
-  document.getElementById("simulacaoQuantidade").value = row.quantidade;
+    e.target.reset();
+    state.kitProdutosTemporarios = [];
+    renderAll();
+  });
 
-  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
-  document.querySelector('.nav-btn[data-tab="simulacao"]').classList.add("active");
-  document.getElementById("simulacao").classList.add("active");
-}
+  document.getElementById("orcamentoTipo").addEventListener("change", renderOrcamentoSelects);
 
-async function onDeleteOrcamento(id) {
-  if (!confirm("Deseja excluir este orçamento?")) return;
-  try {
-    await deleteOrcamento(id);
-    state.orcamentos = await listOrcamentos();
-    renderOrcamentos(state.orcamentos, { onOpen: onOpenOrcamento, onDelete: onDeleteOrcamento });
-    renderDashboard(state);
-  } catch (error) {
-    alert(error.message);
-  }
-}
+  document.getElementById("btnAdicionarItemOrcamento").addEventListener("click", () => {
+    const tipo = document.getElementById("orcamentoTipo").value;
+    const itemId = document.getElementById("orcamentoItemSelect").value;
+    const quantidade = Number(document.getElementById("orcamentoQtd").value);
+    const desconto = Number(document.getElementById("orcamentoDesconto").value || 0);
 
-async function init() {
-  bindTabs();
+    if (!itemId || !quantidade) return;
 
-  document.getElementById("loginForm").addEventListener("submit", handleLogin);
-  document.getElementById("logoutBtn").addEventListener("click", handleLogout);
-  document.getElementById("formConfiguracoes").addEventListener("submit", handleConfiguracoes);
-  document.getElementById("formMateria").addEventListener("submit", handleMateria);
-  document.getElementById("formPapel").addEventListener("submit", handlePapel);
-  document.getElementById("btnAdicionarMateriaProduto").addEventListener("click", onAddTempMaterial);
-  document.getElementById("formProduto").addEventListener("submit", handleProduto);
-  document.getElementById("formSimulacao").addEventListener("submit", handleSimulacao);
-  document.getElementById("btnSalvarOrcamento").addEventListener("click", handleSalvarOrcamento);
+    let nome = "";
+    let valorUnitario = 0;
 
-  document.getElementById("btnCancelarMateria").addEventListener("click", resetMateriaForm);
-  document.getElementById("btnCancelarPapel").addEventListener("click", resetPapelForm);
-  document.getElementById("btnCancelarProduto").addEventListener("click", resetProdutoForm);
-
-  onAuthStateChange(async (session) => {
-    if (session) {
-      await bootAuthenticated();
+    if (tipo === "produto") {
+      const produto = state.produtos.find((p) => p.id === itemId);
+      if (!produto) return;
+      nome = produto.nome;
+      valorUnitario = calcularValorUnitarioProduto(produto, quantidade);
     } else {
-      showAuthScreen();
+      const kit = state.kits.find((k) => k.id === itemId);
+      if (!kit) return;
+      nome = kit.nome;
+      valorUnitario = calcularValorUnitarioKit(kit);
     }
+
+    const subtotalBruto = quantidade * valorUnitario;
+    const descontoSeguro = desconto > subtotalBruto ? subtotalBruto : desconto;
+    const valorTotal = subtotalBruto - descontoSeguro;
+
+    state.itensOrcamento.push({
+      tipo,
+      itemId,
+      nome,
+      quantidade,
+      valorUnitario,
+      desconto: descontoSeguro,
+      subtotalBruto,
+      valorTotal
+    });
+
+    document.getElementById("orcamentoQtd").value = 1;
+    document.getElementById("orcamentoDesconto").value = 0;
+    renderTabelaOrcamento();
+    renderPreviewOrcamento();
+  });
+
+  document.getElementById("orcamentoCliente").addEventListener("input", renderPreviewOrcamento);
+  document.getElementById("orcamentoObservacao").addEventListener("input", renderPreviewOrcamento);
+
+  document.getElementById("btnGerarImagemOrcamento").addEventListener("click", () => {
+    alert("Na próxima etapa eu adapto esse botão para exportar a área do orçamento como imagem.");
   });
 
   const session = await getSession();
@@ -407,6 +499,14 @@ async function init() {
   } else {
     showAuthScreen();
   }
+
+  onAuthStateChange(async (session) => {
+    if (session) {
+      await bootAuthenticated();
+    } else {
+      showAuthScreen();
+    }
+  });
 }
 
 init();
