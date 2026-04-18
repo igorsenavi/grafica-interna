@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gráfica Interna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <h1>Gráfica Interna</h1>
+      <p class="muted">Acesso interno</p>
+
+      <form id="loginForm" class="form-grid">
+        <div class="full">
+          <label for="loginEmail">E-mail</label>
+          <input id="loginEmail" type="email" required />
+        </div>
+        <div class="full">
+          <label for="loginPassword">Senha</label>
+          <input id="loginPassword" type="password" required />
+        </div>
+        <div class="full form-actions">
+          <button type="submit">Entrar</button>
+        </div>
+      </form>
+
+      <p id="authMessage" class="auth-message"></p>
+    </div>
+  </div>
+
+  <div id="appScreen" class="layout hidden">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-dot"></div>
+          <div>
+            <h1>Gráfica Interna</h1>
+            <p id="currentUserEmail" class="sidebar-email"></p>
+          </div>
+        </div>
+
+        <nav>
+          <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+          <button class="nav-btn" data-tab="configuracoes">Configurações</button>
+          <button class="nav-btn" data-tab="materias">Matérias-primas</button>
+          <button class="nav-btn" data-tab="papeis">Papéis</button>
+          <button class="nav-btn" data-tab="produtos">Produtos</button>
+          <button class="nav-btn" data-tab="kits">Kits</button>
+          <button class="nav-btn" data-tab="orcamentos">Orçamentos</button>
+        </nav>
+      </div>
+
+      <button id="logoutBtn" class="btn-secondary sidebar-logout">Sair</button>
+    </aside>
+
+    <main class="content">
+      <section id="dashboard" class="tab active">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Visão geral</p>
+            <h2>Dashboard</h2>
+          </div>
+        </div>
+
+        <div class="cards four">
+          <div class="card"><span>Produtos</span><strong id="totalProdutos">0</strong></div>
+          <div class="card"><span>Kits</span><strong id="totalKits">0</strong></div>
+          <div class="card"><span>Orçamentos</span><strong id="totalOrcamentos">0</strong></div>
+          <div class="card"><span>Tinta por folha</span><strong id="dashTintaFolha">R$ 0,00</strong></div>
+        </div>
+      </section>
+
+      <section id="configuracoes" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Base do sistema</p>
+            <h2>Configurações</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="formConfiguracoes" class="form-grid">
+            <div>
+              <label>Custo para encher o tanque (R$)</label>
+              <input type="number" id="configCustoTanque" step="0.01" min="0" required />
+            </div>
+            <div>
+              <label>Rendimento médio (folhas)</label>
+              <input type="number" id="configRendimentoFolhas" step="1" min="1" required />
+            </div>
+            <div>
+              <label>Custo fixo padrão (%)</label>
+              <input type="number" id="configCustoFixoPadrao" step="0.01" min="0" required />
+            </div>
+            <div>
+              <label>Custo variável padrão (%)</label>
+              <input type="number" id="configCustoVariavelPadrao" step="0.01" min="0" required />
+            </div>
+
+            <div class="full form-actions">
+              <button type="submit">Salvar configurações</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="materias" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2>Matérias-primas</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="formMateria" class="form-grid">
+            <input type="hidden" id="materiaIdEdicao" />
+            <div>
+              <label>Nome</label>
+              <input type="text" id="materiaNome" required />
+            </div>
+            <div>
+              <label>Unidade</label>
+              <select id="materiaUnidade" required>
+                <option value="unidade">unidade</option>
+                <option value="folha">folha</option>
+                <option value="metro">metro</option>
+                <option value="grama">grama</option>
+                <option value="caixa">caixa</option>
+              </select>
+            </div>
+            <div>
+              <label>Custo por unidade (R$)</label>
+              <input type="number" id="materiaCusto" step="0.01" min="0" required />
+            </div>
+            <div>
+              <label>Observação</label>
+              <input type="text" id="materiaObs" />
+            </div>
+
+            <div class="full form-actions">
+              <button type="submit">Salvar matéria-prima</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div id="listaMaterias"></div>
+        </div>
+      </section>
+
+      <section id="papeis" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2>Papéis</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="formPapel" class="form-grid">
+            <div>
+              <label>Nome do papel</label>
+              <input type="text" id="papelNome" required />
+            </div>
+            <div>
+              <label>Gramatura</label>
+              <input type="text" id="papelGramatura" />
+            </div>
+            <div>
+              <label>Largura da folha (cm)</label>
+              <input type="number" id="papelLargura" step="0.01" min="0.01" value="21" required />
+            </div>
+            <div>
+              <label>Altura da folha (cm)</label>
+              <input type="number" id="papelAltura" step="0.01" min="0.01" value="29.7" required />
+            </div>
+            <div>
+              <label>Valor por folha (R$)</label>
+              <input type="number" id="papelValor" step="0.01" min="0" required />
+            </div>
+            <div>
+              <label>Observação</label>
+              <input type="text" id="papelObs" />
+            </div>
+
+            <div class="full form-actions">
+              <button type="submit">Salvar papel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div id="listaPapeis"></div>
+        </div>
+      </section>
+
+      <section id="produtos" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2>Produtos</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="formProduto" class="form-grid">
+            <div class="full">
+              <label>Nome do produto</label>
+              <input type="text" id="produtoNome" required />
+            </div>
+            <div>
+              <label>Largura do item (cm)</label>
+              <input type="number" id="produtoLargura" step="0.01" min="0.01" required />
+            </div>
+            <div>
+              <label>Altura do item (cm)</label>
+              <input type="number" id="produtoAltura" step="0.01" min="0.01" required />
+            </div>
+            <div>
+              <label>Margem entre itens (cm)</label>
+              <input type="number" id="produtoMargem" step="0.01" min="0" value="0" required />
+            </div>
+            <div>
+              <label>Papel padrão</label>
+              <select id="produtoPapel" required></select>
+            </div>
+            <div>
+              <label>Lucro (%)</label>
+              <input type="number" id="produtoLucro" step="0.01" min="0" value="50" required />
+            </div>
+
+            <div class="full">
+              <h4>Materiais extras</h4>
+              <div class="inline-group">
+                <select id="produtoMateriaSelect"></select>
+                <input type="number" id="produtoMateriaQtd" step="0.01" min="0" placeholder="Quantidade" />
+                <button type="button" id="btnAdicionarMateriaProduto">Adicionar</button>
+              </div>
+            </div>
+
+            <div class="full">
+              <div id="materiasDoProduto"></div>
+            </div>
+
+            <div class="full form-actions">
+              <button type="submit">Salvar produto</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div id="listaProdutos"></div>
+        </div>
+      </section>
+
+      <section id="kits" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Composição</p>
+            <h2>Kits</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="formKit" class="form-grid">
+            <div class="full">
+              <label>Nome do kit</label>
+              <input type="text" id="kitNome" required />
+            </div>
+
+            <div class="full">
+              <h4>Produtos do kit</h4>
+              <div class="inline-group">
+                <select id="kitProdutoSelect"></select>
+                <input type="number" id="kitProdutoQtd" min="1" step="1" placeholder="Quantidade" />
+                <button type="button" id="btnAdicionarProdutoKit">Adicionar</button>
+              </div>
+            </div>
+
+            <div class="full">
+              <div id="produtosDoKit"></div>
+            </div>
+
+            <div class="full form-actions">
+              <button type="submit">Salvar kit</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div id="listaKits"></div>
+        </div>
+      </section>
+
+      <section id="orcamentos" class="tab">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Venda</p>
+            <h2>Orçamentos</h2>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div>
+              <label>Cliente</label>
+              <input type="text" id="orcamentoCliente" placeholder="Nome do cliente" />
+            </div>
+            <div>
+              <label>Observação</label>
+              <input type="text" id="orcamentoObservacao" placeholder="Mensagem ou detalhe" />
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Adicionar item ao orçamento</h3>
+          <div class="form-grid">
+            <div>
+              <label>Tipo</label>
+              <select id="orcamentoTipo">
+                <option value="produto">Produto</option>
+                <option value="kit">Kit</option>
+              </select>
+            </div>
+            <div>
+              <label>Item</label>
+              <select id="orcamentoItemSelect"></select>
+            </div>
+            <div>
+              <label>Quantidade</label>
+              <input type="number" id="orcamentoQtd" min="1" step="1" value="1" />
+            </div>
+            <div>
+              <label>Desconto da linha (R$)</label>
+              <input type="number" id="orcamentoDesconto" step="0.01" min="0" value="0" />
+            </div>
+
+            <div class="full form-actions">
+              <button type="button" id="btnAdicionarItemOrcamento">Adicionar ao orçamento</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Itens do orçamento</h3>
+          <div class="table-wrap">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Tipo</th>
+                  <th>Qtd</th>
+                  <th>Valor unitário</th>
+                  <th>Desconto</th>
+                  <th>Valor total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="orcamentoTabelaBody"></tbody>
+            </table>
+          </div>
+
+          <div class="totals">
+            <div class="total-card">
+              <span>Subtotal bruto</span>
+              <strong id="orcSubtotalBruto">R$ 0,00</strong>
+            </div>
+            <div class="total-card">
+              <span>Desconto total</span>
+              <strong id="orcDescontoTotal">R$ 0,00</strong>
+            </div>
+            <div class="total-card highlight">
+              <span>Total final</span>
+              <strong id="orcTotalFinal">R$ 0,00</strong>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btnSalvarOrcamento">Salvar orçamento</button>
+            <button type="button" id="btnGerarImagemOrcamento" class="btn-success">Gerar imagem do orçamento</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Orçamento para envio</h3>
+          <div id="orcamentoPreview" class="quote-preview">
+            <div class="quote-header">
+              <h4>Orçamento</h4>
+              <p id="previewCliente">Cliente: -</p>
+            </div>
+            <div id="previewItens"></div>
+            <div class="quote-footer">
+              <p id="previewObservacao">Observação: -</p>
+              <strong id="previewTotal">Total: R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Orçamentos salvos</h3>
+          <div id="listaOrcamentosSalvos"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
