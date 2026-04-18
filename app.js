@@ -173,10 +173,10 @@ function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
 
 window.removeTempMateria = (index) => {
   state.materiaisTemporarios.splice(index, 1);
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  renderMateriaisTemporarios();
 };
 
-function () {
+function renderMateriaisTemporarios() {
   const el = document.getElementById("produtosDoKit");
   if (!state.kitProdutosTemporarios.length) {
     el.innerHTML = `<p>Nenhum produto adicionado ao kit.</p>`;
