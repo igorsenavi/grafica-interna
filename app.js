@@ -176,7 +176,7 @@ window.removeTempMateria = (index) => {
   r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 };
 
-function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
+function {
   const el = document.getElementById("produtosDoKit");
   if (!state.kitProdutosTemporarios.length) {
     el.innerHTML = `<p>Nenhum produto adicionado ao kit.</p>`;
