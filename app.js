@@ -7,7 +7,11 @@ import {
   listPapeis,
   upsertPapel,
   listProdutos,
-  upsertProduto
+  upsertProduto,
+  listKits,
+  upsertKit,
+  listOrcamentos,
+  saveOrcamento
 } from "./db.js";
 import { formatCurrency, calcularProdutoUnitario } from "./calculations.js";
 
@@ -17,6 +21,7 @@ const state = {
   papeis: [],
   produtos: [],
   kits: [],
+  orcamentos: [],
   materiaisTemporarios: [],
   kitProdutosTemporarios: [],
   itensOrcamento: [],
@@ -49,13 +54,15 @@ async function loadData() {
   state.materias = await listMaterias();
   state.papeis = await listPapeis();
   state.produtos = await listProdutos();
+  state.kits = await listKits();
+  state.orcamentos = await listOrcamentos();
   renderAll();
 }
 
 function renderAll() {
   document.getElementById("totalProdutos").textContent = state.produtos.length;
   document.getElementById("totalKits").textContent = state.kits.length;
-  document.getElementById("totalOrcamentos").textContent = state.itensOrcamento.length ? 1 : 0;
+  document.getElementById("totalOrcamentos").textContent = state.orcamentos.length;
 
   const tintaPorFolha =
     Number(state.configuracoes?.custo_tanque || 0) /
@@ -307,6 +314,38 @@ function renderPreviewOrcamento() {
     : `<p>Nenhum item no orçamento.</p>`;
 }
 
+async function salvarOrcamentoCompleto() {
+  const subtotalBruto = state.itensOrcamento.reduce((acc, item) => acc + item.subtotalBruto, 0);
+  const descontoTotal = state.itensOrcamento.reduce((acc, item) => acc + item.desconto, 0);
+  const totalFinal = state.itensOrcamento.reduce((acc, item) => acc + item.valorTotal, 0);
+
+  await saveOrcamento({
+    cliente: document.getElementById("orcamentoCliente").value.trim(),
+    observacao: document.getElementById("orcamentoObservacao").value.trim(),
+    subtotalBruto,
+    descontoTotal,
+    totalFinal,
+    itens: [...state.itensOrcamento]
+  });
+
+  alert("Orçamento salvo com sucesso.");
+  state.orcamentos = await listOrcamentos();
+  renderAll();
+}
+
+async function exportarImagemOrcamento() {
+  const preview = document.getElementById("orcamentoPreview");
+  const canvas = await html2canvas(preview, {
+    backgroundColor: "#ffffff",
+    scale: 2
+  });
+
+  const link = document.createElement("a");
+  link.download = "orcamento.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
 async function bootAuthenticated() {
   const user = await getUser();
   showAppScreen(user?.email || "");
@@ -423,21 +462,20 @@ async function init() {
     r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   });
 
-  document.getElementById("formKit").addEventListener("submit", (e) => {
+  document.getElementById("formKit").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const nome = document.getElementById("kitNome").value.trim();
     if (!nome || !state.kitProdutosTemporarios.length) return;
 
-    state.kits.push({
-      id: crypto.randomUUID(),
+    await upsertKit({
       nome,
       itens: [...state.kitProdutosTemporarios]
     });
 
     e.target.reset();
     state.kitProdutosTemporarios = [];
-    renderAll();
+    await loadData();
   });
 
   document.getElementById("orcamentoTipo").addEventListener("change", renderOrcamentoSelects);
@@ -488,10 +526,8 @@ async function init() {
 
   document.getElementById("orcamentoCliente").addEventListener("input", renderPreviewOrcamento);
   document.getElementById("orcamentoObservacao").addEventListener("input", renderPreviewOrcamento);
-
-  document.getElementById("btnGerarImagemOrcamento").addEventListener("click", () => {
-    alert("Na próxima etapa eu adapto esse botão para exportar a área do orçamento como imagem.");
-  });
+  document.getElementById("btnSalvarOrcamento").addEventListener("click", salvarOrcamentoCompleto);
+  document.getElementById("btnGerarImagemOrcamento").addEventListener("click", exportarImagemOrcamento);
 
   const session = await getSession();
   if (session) {
