@@ -1,4 +1,5 @@
 import { getSession, getUser, signIn, signOut, onAuthStateChange } from "./auth.js";
+import { supabase } from "./supabaseClient.js";
 import {
   fetchConfiguracoes,
   saveConfiguracoes,
@@ -25,6 +26,8 @@ const state = {
   materiaisTemporarios: [],
   kitProdutosTemporarios: [],
   itensOrcamento: [],
+  papelEditandoId: null,
+  produtoEditandoId: null,
 };
 
 function showAuthScreen() {
@@ -96,6 +99,7 @@ function renderMaterias() {
         <div class="row-info">
           <strong>${item.nome}</strong>
           <span>${item.unidade} • ${formatCurrency(item.custo)}</span>
+          ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
         </div>
       </div>
     `).join("")
@@ -116,6 +120,12 @@ function renderPapeis() {
         <div class="row-info">
           <strong>${item.nome}</strong>
           <span>${item.largura} x ${item.altura} cm • ${formatCurrency(item.valor_folha)}</span>
+          ${item.gramatura ? `<span>Gramatura: ${item.gramatura}</span>` : ""}
+          ${item.observacao ? `<span>Obs.: ${item.observacao}</span>` : ""}
+        </div>
+        <div class="row-actions">
+          <button onclick="window.editarPapel('${item.id}')">Editar</button>
+          <button class="btn-secondary" onclick="window.excluirPapel('${item.id}')">Excluir</button>
         </div>
       </div>
     `).join("")
@@ -136,6 +146,11 @@ function renderProdutos() {
         <div class="row-info">
           <strong>${item.nome}</strong>
           <span>${item.largura} x ${item.altura} cm • lucro ${item.lucro}%</span>
+          <span>Margem: ${item.margem ?? 0} cm</span>
+        </div>
+        <div class="row-actions">
+          <button onclick="window.editarProduto('${item.id}')">Editar</button>
+          <button class="btn-secondary" onclick="window.excluirProduto('${item.id}')">Excluir</button>
         </div>
       </div>
     `).join("")
@@ -314,6 +329,75 @@ function renderPreviewOrcamento() {
     : `<p>Nenhum item no orçamento.</p>`;
 }
 
+window.editarPapel = (id) => {
+  const item = state.papeis.find((p) => p.id === id);
+  if (!item) return;
+
+  document.getElementById("papelNome").value = item.nome || "";
+  document.getElementById("papelGramatura").value = item.gramatura || "";
+  document.getElementById("papelLargura").value = item.largura || "";
+  document.getElementById("papelAltura").value = item.altura || "";
+  document.getElementById("papelValor").value = item.valor_folha || "";
+  document.getElementById("papelObs").value = item.observacao || "";
+
+  state.papelEditandoId = id;
+
+  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+  document.querySelector('.nav-btn[data-tab="papeis"]').classList.add("active");
+  document.getElementById("papeis").classList.add("active");
+};
+
+window.excluirPapel = async (id) => {
+  const confirmar = confirm("Deseja excluir este papel?");
+  if (!confirmar) return;
+
+  const { error } = await supabase.from("papeis").delete().eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadData();
+};
+
+window.editarProduto = (id) => {
+  const item = state.produtos.find((p) => p.id === id);
+  if (!item) return;
+
+  document.getElementById("produtoNome").value = item.nome || "";
+  document.getElementById("produtoLargura").value = item.largura || "";
+  document.getElementById("produtoAltura").value = item.altura || "";
+  document.getElementById("produtoMargem").value = item.margem || 0;
+  document.getElementById("produtoPapel").value = item.papel_id || "";
+  document.getElementById("produtoLucro").value = item.lucro || 0;
+
+  state.materiaisTemporarios = [...(item.materiaisExtras || [])];
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+
+  state.produtoEditandoId = id;
+
+  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+  document.querySelector('.nav-btn[data-tab="produtos"]').classList.add("active");
+  document.getElementById("produtos").classList.add("active");
+};
+
+window.excluirProduto = async (id) => {
+  const confirmar = confirm("Deseja excluir este produto?");
+  if (!confirmar) return;
+
+  const { error } = await supabase.from("produtos").delete().eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadData();
+};
+
 async function salvarOrcamentoCompleto() {
   const subtotalBruto = state.itensOrcamento.reduce((acc, item) => acc + item.subtotalBruto, 0);
   const descontoTotal = state.itensOrcamento.reduce((acc, item) => acc + item.desconto, 0);
@@ -399,7 +483,9 @@ async function init() {
 
   document.getElementById("formPapel").addEventListener("submit", async (e) => {
     e.preventDefault();
+
     await upsertPapel({
+      id: state.papelEditandoId || undefined,
       nome: document.getElementById("papelNome").value.trim(),
       gramatura: document.getElementById("papelGramatura").value.trim(),
       largura: Number(document.getElementById("papelLargura").value),
@@ -407,9 +493,12 @@ async function init() {
       valor_folha: Number(document.getElementById("papelValor").value),
       observacao: document.getElementById("papelObs").value.trim(),
     });
+
     e.target.reset();
     document.getElementById("papelLargura").value = 21;
     document.getElementById("papelAltura").value = 29.7;
+    state.papelEditandoId = null;
+
     await loadData();
   });
 
@@ -430,7 +519,9 @@ async function init() {
 
   document.getElementById("formProduto").addEventListener("submit", async (e) => {
     e.preventDefault();
+
     await upsertProduto({
+      id: state.produtoEditandoId || undefined,
       nome: document.getElementById("produtoNome").value.trim(),
       largura: Number(document.getElementById("produtoLargura").value),
       altura: Number(document.getElementById("produtoAltura").value),
@@ -444,6 +535,9 @@ async function init() {
 
     e.target.reset();
     state.materiaisTemporarios = [];
+    state.produtoEditandoId = null;
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+
     await loadData();
   });
 
