@@ -288,7 +288,9 @@ export async function upsertKit(payload) {
   if (kitId) {
     const { error } = await supabase
       .from("kits")
-      .update({ nome: payload.nome })
+      .update({
+        nome: payload.nome,
+      })
       .eq("id", kitId);
 
     if (error) throw error;
@@ -302,12 +304,23 @@ export async function upsertKit(payload) {
   } else {
     const { data, error } = await supabase
       .from("kits")
-      .insert([{ user_id: userId, nome: payload.nome }])
-      .select()
+      .insert([
+        {
+          user_id: userId,
+          nome: payload.nome,
+        },
+      ])
+      .select("id")
       .single();
 
     if (error) throw error;
+    if (!data?.id) throw new Error("Não foi possível obter o ID do kit salvo.");
+
     kitId = data.id;
+  }
+
+  if (!kitId) {
+    throw new Error("ID do kit não encontrado.");
   }
 
   if (payload.itens?.length) {
@@ -315,10 +328,13 @@ export async function upsertKit(payload) {
       user_id: userId,
       kit_id: kitId,
       produto_id: item.produto_id,
-      quantidade: item.quantidade,
+      quantidade: Number(item.quantidade),
     }));
 
-    const { error } = await supabase.from("kit_itens").insert(rows);
+    const { error } = await supabase
+      .from("kit_itens")
+      .insert(rows);
+
     if (error) throw error;
   }
 
