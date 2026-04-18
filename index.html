@@ -260,43 +260,43 @@
       </section>
 
       <section id="kits" class="tab">
-        <div class="page-header">
-          <div>
-            <p class="eyebrow">Composição</p>
-            <h2>Kits</h2>
-          </div>
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Composição</p>
+      <h2>Kits</h2>
+    </div>
+  </div>
+
+  <div class="panel">
+    <form id="formKit" class="form-grid">
+      <div class="full">
+        <label>Nome do kit</label>
+        <input type="text" id="kitNome" required />
+      </div>
+
+      <div class="full">
+        <h4>Produtos do kit</h4>
+        <div class="inline-group">
+          <select id="kitProdutoSelect"></select>
+          <input type="number" id="kitProdutoQtd" min="1" step="1" placeholder="Quantidade" />
+          <button type="button" id="btnAdicionarProdutoKit">Adicionar</button>
         </div>
+      </div>
 
-        <div class="panel">
-          <form id="formKit" class="form-grid">
-            <div class="full">
-              <label>Nome do kit</label>
-              <input type="text" id="kitNome" required />
-            </div>
+      <div class="full">
+        <div id="produtosDoKit"></div>
+      </div>
 
-            <div class="full">
-              <h4>Produtos do kit</h4>
-              <div class="inline-group">
-                <select id="kitProdutoSelect"></select>
-                <input type="number" id="kitProdutoQtd" min="1" step="1" placeholder="Quantidade" />
-                <button type="button" id="btnAdicionarProdutoKit">Adicionar</button>
-              </div>
-            </div>
+      <div class="full form-actions">
+        <button type="submit">Salvar kit</button>
+      </div>
+    </form>
+  </div>
 
-            <div class="full">
-              <div id="produtosDoKit"></div>
-            </div>
-
-            <div class="full form-actions">
-              <button type="submit">Salvar kit</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="panel">
-          <div id="listaKits"></div>
-        </div>
-      </section>
+  <div class="panel">
+    <div id="listaKits"></div>
+  </div>
+</section>
 
       <section id="orcamentos" class="tab">
         <div class="page-header">
