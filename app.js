@@ -189,10 +189,10 @@ function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
 
 window.removeTempMateria = (index) => {
   state.materiaisTemporarios.splice(index, 1);
-  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  renderMateriaisTemporarios();
 };
 
-function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
+function renderMateriaisTemporarios() {
   const el = document.getElementById("produtosDoKit");
 
   if (!state.kitProdutosTemporarios.length) {
