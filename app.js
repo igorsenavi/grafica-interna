@@ -430,38 +430,6 @@ function calcularResumoKit(kit, quantidadeKits = 1) {
   };
 }
 
-function renderTabelaOrcamento() {
-  const body = document.getElementById("orcamentoTabelaBody");
-
-  if (!state.itensOrcamento.length) {
-    body.innerHTML = `<tr><td colspan="7">Nenhum item adicionado.</td></tr>`;
-  } else {
-    body.innerHTML = state.itensOrcamento.map((item, index) => {
-      let detalheLinha = "";
-
-      if (item.tipo === "produto" && item.detalhesCusto) {
-        const d = item.detalhesCusto;
-        detalheLinha = `
-          <tr class="details-row">
-            <td colspan="7">
-              <div class="detail-box">
-                <strong>Custos do produto</strong>
-                <div class="row-cost-grid">
-                  <div><span>Folhas</span><strong>${d.folhasNecessarias}</strong></div>
-                  <div><span>Capacidade</span><strong>${d.capacidadePorFolha}</strong></div>
-                  <div><span>Aproveitamento</span><strong>${d.aproveitamentoReal.toFixed(2)}%</strong></div>
-                  <div><span>Papel</span><strong>${formatCurrency(d.custoTotalPapel)}</strong></div>
-                  <div><span>Tinta</span><strong>${formatCurrency(d.custoTotalTinta)}</strong></div>
-                  <div><span>Extras</span><strong>${formatCurrency(d.custoTotalExtras || 0)}</strong></div>
-                  <div><span>Mão de obra</span><strong>${formatCurrency(d.custoTotalMaoObra || 0)}</strong></div>
-                  <div><span>Custo total</span><strong>${formatCurrency(d.custoTotalPedido)}</strong></div>
-                </div>
-              </div>
-            </td>
-          </tr>
-        `;
-      }
-
       if (item.tipo === "kit" && item.detalhesKit?.length) {
         detalheLinha = `
           <tr class="details-row">
