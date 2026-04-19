@@ -86,14 +86,13 @@ function renderAll() {
   renderMaterias();
   renderPapeis();
   renderProdutos();
-  renderMateriaisTemporarios();
-  renderKitProdutosTemporarios();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   renderKits();
   renderOrcamentoSelects();
   renderTabelaOrcamento();
   renderPreviewOrcamento();
   renderOrcamentosSalvos();
-  atualizarResumoCadastroProduto();
 }
 
 function renderMaterias() {
@@ -148,38 +147,21 @@ function renderProdutos() {
   const kitSelect = document.getElementById("kitProdutoSelect");
 
   lista.innerHTML = state.produtos.length
-    ? state.produtos.map((item) => {
-        let custosHtml = `<span class="muted-mini">Sem prévia de custo.</span>`;
-        try {
-          const resumo = calcularResumoProduto(item, 1);
-          const vendaManual = Number(item.preco_venda_manual || 0);
-          custosHtml = `
-            <div class="row-cost-grid">
-              <div><span>Custo</span><strong>${formatCurrency(resumo.custoTotalPedido)}</strong></div>
-              <div><span>Sugerido</span><strong>${formatCurrency(resumo.precoSugeridoTotal)}</strong></div>
-              <div><span>Venda</span><strong>${formatCurrency(vendaManual > 0 ? vendaManual : resumo.precoSugeridoUnitario)}</strong></div>
-              <div><span>Aproveitamento</span><strong>${resumo.aproveitamentoReal.toFixed(2)}%</strong></div>
-            </div>
-          `;
-        } catch (error) {}
-
-        return `
-      <div class="row row-stack">
+    ? state.produtos.map((item) => `
+      <div class="row">
         <div class="row-info">
           <strong>${item.nome}</strong>
           <span>${item.largura} x ${item.altura} cm • lucro ${item.lucro}%</span>
           <span>Margem: ${item.margem ?? 0} cm</span>
           <span>Tempo de produção: ${item.tempo_producao_minutos ?? 0} min/un</span>
           <span>Capacidade por folha: ${item.capacidade_manual_folha ? `${item.capacidade_manual_folha} (manual)` : 'automática'}</span>
-          <span>Preço de venda: ${Number(item.preco_venda_manual || 0) > 0 ? formatCurrency(item.preco_venda_manual) : 'usar valor sugerido'}</span>
-          ${custosHtml}
         </div>
         <div class="row-actions">
           <button onclick="window.editarProduto('${item.id}')">Editar</button>
           <button class="btn-secondary" onclick="window.excluirProduto('${item.id}')">Excluir</button>
         </div>
       </div>
-    `}).join("")
+    `).join("")
     : `<p>Nenhum produto cadastrado.</p>`;
 
   if (kitSelect) {
@@ -189,7 +171,7 @@ function renderProdutos() {
   }
 }
 
-function renderMateriaisTemporarios() {
+function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
   const el = document.getElementById("materiasDoProduto");
   if (!state.materiaisTemporarios.length) {
     el.innerHTML = `<p>Nenhum material extra adicionado.</p>`;
@@ -214,11 +196,10 @@ function renderMateriaisTemporarios() {
 
 window.removeTempMateria = (index) => {
   state.materiaisTemporarios.splice(index, 1);
-  renderMateriaisTemporarios();
-  atualizarResumoCadastroProduto();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 };
 
-function renderKitProdutosTemporarios() {
+function r3t24NpUrJMNunMMASmhAM953bFGeLXzN7() {
   const el = document.getElementById("produtosDoKit");
 
   if (!state.kitProdutosTemporarios.length) {
@@ -254,7 +235,7 @@ function renderKitProdutosTemporarios() {
 
 window.removeTempKitProduto = (index) => {
   state.kitProdutosTemporarios.splice(index, 1);
-  renderKitProdutosTemporarios();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 };
 
 function renderKits() {
@@ -299,92 +280,6 @@ function renderOrcamentoSelects() {
   }
 }
 
-function getProdutoFormPayload() {
-  return {
-    id: state.produtoEditandoId || undefined,
-    nome: document.getElementById("produtoNome").value.trim(),
-    largura: Number(document.getElementById("produtoLargura").value || 0),
-    altura: Number(document.getElementById("produtoAltura").value || 0),
-    margem: Number(document.getElementById("produtoMargem").value || 0),
-    papel_id: document.getElementById("produtoPapel").value,
-    custo_fixo: Number(state.configuracoes?.custo_fixo_padrao || 0),
-    custo_variavel: Number(state.configuracoes?.custo_variavel_padrao || 0),
-    lucro: Number(document.getElementById("produtoLucro").value || 0),
-    preco_venda_manual: Number(document.getElementById("produtoPrecoVenda").value || 0),
-    tempo_producao_minutos: Number(document.getElementById("produtoTempoProducao").value || 0),
-    capacidade_manual_folha: Number(document.getElementById("produtoCapacidadeManual").value || 0),
-    materiaisExtras: [...state.materiaisTemporarios],
-  };
-}
-
-function calcularValorVendaProduto(produto, quantidade, resumo = null) {
-  const precoManual = Number(produto?.preco_venda_manual || 0);
-  if (precoManual > 0) {
-    return {
-      valorUnitario: precoManual,
-      subtotalBruto: precoManual * Number(quantidade || 0),
-      origem: "manual",
-    };
-  }
-
-  const resumoSeguro = resumo || calcularResumoProduto(produto, quantidade);
-  return {
-    valorUnitario: resumoSeguro.precoSugeridoUnitario,
-    subtotalBruto: resumoSeguro.precoSugeridoTotal,
-    origem: "sugerido",
-  };
-}
-
-function atualizarResumoCadastroProduto() {
-  const custoEl = document.getElementById("produtoPreviewCustoTotal");
-  const sugeridaEl = document.getElementById("produtoPreviewVendaSugerida");
-  const informadaEl = document.getElementById("produtoPreviewVendaInformada");
-  const lucroEl = document.getElementById("produtoPreviewLucroInformado");
-  const metaEl = document.getElementById("produtoPreviewMeta");
-
-  if (!custoEl || !state.configuracoes) return;
-
-  try {
-    const produto = getProdutoFormPayload();
-    const quantidade = Number(document.getElementById("produtoQtdPreview").value || 1);
-    const papel = state.papeis.find((item) => item.id === produto.papel_id);
-
-    if (!produto.nome || !papel || !produto.largura || !produto.altura || quantidade <= 0) {
-      throw new Error("Preencha os campos principais do produto para ver a prévia.");
-    }
-
-    const resumo = calcularProdutoUnitario({
-      produto,
-      papel,
-      materias: state.materias,
-      configuracoes: state.configuracoes,
-      quantidade,
-    });
-
-    const precoInformado = Number(produto.preco_venda_manual || 0);
-    const totalInformado = precoInformado * quantidade;
-    const lucroInformado = totalInformado - resumo.custoTotalPedido;
-
-    custoEl.textContent = formatCurrency(resumo.custoTotalPedido);
-    sugeridaEl.textContent = formatCurrency(resumo.precoSugeridoTotal);
-    informadaEl.textContent = formatCurrency(totalInformado);
-    lucroEl.textContent = formatCurrency(lucroInformado);
-    metaEl.innerHTML = `
-      <span>${papel.nome}</span>
-      <span>${resumo.orientacao}</span>
-      <span>${resumo.capacidadePorFolha} por folha</span>
-      <span>${resumo.folhasNecessarias} folha(s)</span>
-      <span>${resumo.aproveitamentoReal.toFixed(2)}% aproveitamento</span>
-    `;
-  } catch (error) {
-    custoEl.textContent = formatCurrency(0);
-    sugeridaEl.textContent = formatCurrency(0);
-    informadaEl.textContent = formatCurrency(0);
-    lucroEl.textContent = formatCurrency(0);
-    metaEl.innerHTML = `<span>${error.message || "Preencha os campos do produto para ver a prévia."}</span>`;
-  }
-}
-
 function calcularResumoProduto(produto, quantidade) {
   const papel = state.papeis.find((p) => p.id === produto.papel_id);
   return calcularProdutoUnitario({
@@ -410,17 +305,15 @@ function calcularResumoKit(kit, quantidadeKits = 1) {
 
     const quantidadeTotalProduto = Number(item.quantidade) * Number(quantidadeKits);
     const resumo = calcularResumoProduto(produto, quantidadeTotalProduto);
-    const venda = calcularValorVendaProduto(produto, quantidadeTotalProduto, resumo);
 
     detalhes.push({
       nome: produto.nome,
       quantidade: quantidadeTotalProduto,
-      valorUnitario: venda.valorUnitario,
-      subtotal: venda.subtotalBruto,
-      custoTotal: resumo.custoTotalPedido,
+      valorUnitario: resumo.precoSugeridoUnitario,
+      subtotal: resumo.precoSugeridoTotal,
     });
 
-    total += venda.subtotalBruto;
+    total += resumo.precoSugeridoTotal;
   }
 
   return {
@@ -430,50 +323,21 @@ function calcularResumoKit(kit, quantidadeKits = 1) {
   };
 }
 
-      if (item.tipo === "kit" && item.detalhesKit?.length) {
-        detalheLinha = `
-          <tr class="details-row">
-            <td colspan="7">
-              <div class="detail-box">
-                <strong>Composição do kit</strong>
-                ${item.detalhesKit.map((det) => `
-                  <div class="kit-cost-line">
-                    <span>${det.nome} • ${det.quantidade} un</span>
-                    <span>Custo ${formatCurrency(det.custoTotal)}</span>
-                    <span>Venda ${formatCurrency(det.subtotal)}</span>
-                  </div>
-                `).join("")}
-              </div>
-            </td>
-          </tr>
-        `;
-      }
+function renderTabelaOrcamento() {
+  const body = document.getElementById("orcamentoTabelaBody");
 
-      return `
-        <tr>
-          <td>${item.nome}</td>
-          <td>${item.tipo}</td>
-          <td>${item.quantidade}</td>
-          <td>${formatCurrency(item.valorUnitario)}</td>
-          <td>${formatCurrency(item.desconto)}</td>
-          <td>${formatCurrency(item.valorTotal)}</td>
-          <td><button onclick="window.removerItemOrcamento(${index})">Remover</button></td>
-        </tr>
-        ${detalheLinha}
-      `;
-    }).join("");
-  }
-
-  const subtotalBruto = state.itensOrcamento.reduce((acc, item) => acc + item.subtotalBruto, 0);
-  const descontoTotal = state.itensOrcamento.reduce((acc, item) => acc + item.desconto, 0);
-  const totalFinal = state.itensOrcamento.reduce((acc, item) => acc + item.valorTotal, 0);
-
-  document.getElementById("orcSubtotalBruto").textContent = formatCurrency(subtotalBruto);
-  document.getElementById("orcDescontoTotal").textContent = formatCurrency(descontoTotal);
-  document.getElementById("orcTotalFinal").textContent = formatCurrency(totalFinal);
-}
-
-window.removerItemOrcamento(${index})">Remover</button></td>
+  if (!state.itensOrcamento.length) {
+    body.innerHTML = `<tr><td colspan="7">Nenhum item adicionado.</td></tr>`;
+  } else {
+    body.innerHTML = state.itensOrcamento.map((item, index) => `
+      <tr>
+        <td>${item.nome}</td>
+        <td>${item.tipo}</td>
+        <td>${item.quantidade}</td>
+        <td>${formatCurrency(item.valorUnitario)}</td>
+        <td>${formatCurrency(item.desconto)}</td>
+        <td>${formatCurrency(item.valorTotal)}</td>
+        <td><button onclick="window.removerItemOrcamento(${index})">Remover</button></td>
       </tr>
     `).join("");
   }
@@ -581,7 +445,6 @@ window.abrirOrcamentoSalvo = (id) => {
     subtotalBruto: Number(item.subtotal_bruto),
     valorTotal: Number(item.valor_total),
     detalhesKit: [],
-    detalhesCusto: null,
   }));
 
   renderTabelaOrcamento();
@@ -636,13 +499,11 @@ window.editarProduto = (id) => {
   document.getElementById("produtoMargem").value = item.margem || 0;
   document.getElementById("produtoPapel").value = item.papel_id || "";
   document.getElementById("produtoLucro").value = item.lucro || 0;
-  document.getElementById("produtoPrecoVenda").value = item.preco_venda_manual || 0;
   document.getElementById("produtoTempoProducao").value = item.tempo_producao_minutos || 0;
   document.getElementById("produtoCapacidadeManual").value = item.capacidade_manual_folha || 0;
 
   state.materiaisTemporarios = [...(item.materiaisExtras || [])];
-  renderMateriaisTemporarios();
-  atualizarResumoCadastroProduto();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 
   state.produtoEditandoId = id;
 
@@ -674,7 +535,7 @@ window.editarKit = (id) => {
   state.kitProdutosTemporarios = [...(kit.itens || [])];
   state.kitEditandoId = id;
 
-  renderKitProdutosTemporarios();
+  r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 
   document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.remove("active"));
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
@@ -816,24 +677,33 @@ async function init() {
     });
 
     document.getElementById("produtoMateriaQtd").value = "";
-    renderMateriaisTemporarios();
-    atualizarResumoCadastroProduto();
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   });
 
   document.getElementById("formProduto").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    await upsertProduto(getProdutoFormPayload());
+    await upsertProduto({
+      id: state.produtoEditandoId || undefined,
+      nome: document.getElementById("produtoNome").value.trim(),
+      largura: Number(document.getElementById("produtoLargura").value),
+      altura: Number(document.getElementById("produtoAltura").value),
+      margem: Number(document.getElementById("produtoMargem").value),
+      papel_id: document.getElementById("produtoPapel").value,
+      custo_fixo: Number(state.configuracoes.custo_fixo_padrao),
+      custo_variavel: Number(state.configuracoes.custo_variavel_padrao),
+      lucro: Number(document.getElementById("produtoLucro").value),
+      tempo_producao_minutos: Number(document.getElementById("produtoTempoProducao").value),
+      capacidade_manual_folha: Number(document.getElementById("produtoCapacidadeManual").value || 0),
+      materiaisExtras: [...state.materiaisTemporarios],
+    });
 
     e.target.reset();
-    document.getElementById("produtoPrecoVenda").value = 0;
     document.getElementById("produtoTempoProducao").value = 0;
     document.getElementById("produtoCapacidadeManual").value = 0;
-    document.getElementById("produtoQtdPreview").value = 1;
     state.materiaisTemporarios = [];
     state.produtoEditandoId = null;
-    renderMateriaisTemporarios();
-    atualizarResumoCadastroProduto();
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 
     await loadData();
   });
@@ -853,7 +723,7 @@ async function init() {
     });
 
     document.getElementById("kitProdutoQtd").value = "";
-    renderKitProdutosTemporarios();
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
   });
 
   document.getElementById("formKit").addEventListener("submit", async (e) => {
@@ -874,7 +744,7 @@ async function init() {
     e.target.reset();
     state.kitProdutosTemporarios = [];
     state.kitEditandoId = null;
-    renderKitProdutosTemporarios();
+    r3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 
     await loadData();
   });
@@ -894,18 +764,14 @@ async function init() {
     let subtotalBruto = 0;
     let detalhesKit = [];
 
-    let detalhesCusto = null;
-
     if (tipo === "produto") {
       const produto = state.produtos.find((p) => p.id === itemId);
       if (!produto) return;
 
       const resumo = calcularResumoProduto(produto, quantidade);
-      const venda = calcularValorVendaProduto(produto, quantidade, resumo);
       nome = produto.nome;
-      valorUnitario = venda.valorUnitario;
-      subtotalBruto = venda.subtotalBruto;
-      detalhesCusto = resumo;
+      valorUnitario = resumo.precoSugeridoUnitario;
+      subtotalBruto = resumo.precoSugeridoTotal;
     } else {
       const kit = state.kits.find((k) => k.id === itemId);
       if (!kit) return;
@@ -930,7 +796,6 @@ async function init() {
       subtotalBruto,
       valorTotal,
       detalhesKit,
-      detalhesCusto,
     });
 
     document.getElementById("orcamentoQtd").value = 1;
@@ -938,25 +803,6 @@ async function init() {
 
     renderTabelaOrcamento();
     renderPreviewOrcamento();
-  });
-
-  [
-    "produtoNome",
-    "produtoLargura",
-    "produtoAltura",
-    "produtoMargem",
-    "produtoPapel",
-    "produtoLucro",
-    "produtoPrecoVenda",
-    "produtoTempoProducao",
-    "produtoCapacidadeManual",
-    "produtoQtdPreview"
-  ].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener("input", atualizarResumoCadastroProduto);
-      el.addEventListener("change", atualizarResumoCadastroProduto);
-    }
   });
 
   document.getElementById("orcamentoCliente").addEventListener("input", renderPreviewOrcamento);
