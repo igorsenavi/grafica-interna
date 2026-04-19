@@ -505,7 +505,7 @@ function renderTabelaOrcamento() {
   document.getElementById("orcTotalFinal").textContent = formatCurrency(totalFinal);
 }
 
-window.removerItemOrcamento(${index})">Remover</button></td>
+window.removerItemOrcamento({index})">Remover</button></td>
       </tr>
     `).join("");
   }
